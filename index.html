@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>GTA VI: Israel</title>
+    <meta name="description" content="משחק עולם פתוח סאטירי בדפדפן – זמין כל הזמן בכל מקום" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <!-- Loading / title screen -->
+    <div id="loading" class="screen">
+      <div class="logo" aria-label="VI Israel">
+        <span class="logo-vi">VI</span>
+        <span class="logo-israel">Israel</span>
+      </div>
+      <div class="loading-bar"><div id="loading-fill"></div></div>
+      <p id="loading-tip" class="tip"></p>
+      <button id="start-btn" class="start-btn" hidden>לחצו כדי להתחיל <small>PRESS START</small></button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" hidden>
+      <div id="zone-banner"><div class="zone-en"></div><div class="zone-he"></div></div>
+      <div id="hud-clock"></div>
+      <div id="hud-fps"></div>
+      <div id="hud-help">
+        <b>WASD</b> תנועה · <b>Shift</b> ריצה · <b>רווח</b> קפיצה · <b>עכבר</b> מצלמה · <b>גלגלת</b> זום · <b>T</b> זמן מהיר · <b>H</b> הסתר עזרה
+      </div>
+    </div>
+  </body>
+  <script type="module" src="/src/main.ts"></script>
+</html>
