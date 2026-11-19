@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { worldUniforms } from './Materials';
+import { Clouds } from './Clouds';
 
 const lerp = THREE.MathUtils.lerp;
 const smooth = THREE.MathUtils.smoothstep;
@@ -17,6 +18,9 @@ export class DayNight {
   readonly fog: THREE.Fog;
   /** in-game hour 0..24 */
   hour = 17.6;
+  /** pre-tonemap exposure, golden-hour factor (read by post FX) */
+  exposure = 1;
+  golden = 0;
   /** game minutes per real second */
   speed = 1;
   private sunDir = new THREE.Vector3();
@@ -26,8 +30,9 @@ export class DayNight {
   private envRT: THREE.WebGLRenderTarget | null = null;
   private envTimer = 999;
   private stars: THREE.Points;
+  readonly clouds = new Clouds();
 
-  constructor(private scene: THREE.Scene, private renderer: THREE.WebGLRenderer, shadowSize = 2048) {
+  constructor(private scene: THREE.Scene, renderer: THREE.WebGLRenderer, shadowSize = 2048) {
     this.sky.scale.setScalar(4500);
     scene.add(this.sky);
     this.envSky.scale.setScalar(1000);
@@ -57,6 +62,7 @@ export class DayNight {
     g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
     this.stars = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
     scene.add(this.stars);
+    scene.add(this.clouds.mesh);
   }
 
   /** Jump to an hour and refresh lighting/env immediately. */
@@ -103,7 +109,7 @@ export class DayNight {
 
     this.hemi.color.setRGB(lerp(0.2, 0.72, day) + golden * 0.15, lerp(0.22, 0.8, day), lerp(0.45, 1.0, day));
     this.hemi.groundColor.setRGB(lerp(0.06, 0.5, day) + golden * 0.15, lerp(0.05, 0.4, day), lerp(0.1, 0.3, day));
-    this.hemi.intensity = lerp(0.6, 1.1, day);
+    this.hemi.intensity = lerp(0.9, 1.1, day);
 
     // fog: purple-pink at sunset, blue haze by day, deep violet at night
     const fogDay = new THREE.Color(0xb9d3ea), fogGold = new THREE.Color(0xf6a98b), fogNight = new THREE.Color(0x1a1530);
@@ -113,7 +119,13 @@ export class DayNight {
     this.fog.far = lerp(1800, 1200, golden);
     (this.stars.material as THREE.PointsMaterial).opacity = worldUniforms.uNight.value * 0.9;
     this.stars.position.copy(focus);
-    this.renderer.toneMappingExposure = lerp(0.72, 0.5, golden) * lerp(1, 1.25, worldUniforms.uNight.value);
+    // clouds: warm sunset light on the undersides, pinkish at golden hour
+    const cloudSun = new THREE.Color().setRGB(1.0, lerp(0.62, 0.95, smooth(this.sunDir.y, 0.02, 0.5)), lerp(0.55, 0.92, smooth(this.sunDir.y, 0.02, 0.5)))
+      .multiplyScalar(lerp(0.35, 1.25, day));
+    if (golden > 0.2) cloudSun.lerp(new THREE.Color(1.0, 0.55, 0.62), golden * 0.45);
+    this.clouds.update(worldUniforms.uTime.value, this.sunDir, cloudSun, fc, worldUniforms.uNight.value, focus);
+    this.exposure = lerp(0.9, 0.75, golden) * lerp(1, 2.3, worldUniforms.uNight.value);
+    this.golden = golden;
 
     // refresh environment map every few seconds (or quickly when time is sped up)
     this.envTimer += dt * Math.max(1, this.speed / 6);

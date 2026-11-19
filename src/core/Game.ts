@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import { Input } from './Input';
 import { CityBuilder, type CityRuntime } from '../world/City';
+import { loadTextures, setMaxAnisotropy } from '../render/Textures';
+import { loadModel } from '../render/GltfInstances';
+import { PostFX } from '../render/Post';
 import { DayNight } from '../world/DayNight';
 import { buildSea } from '../world/Sea';
 import { worldUniforms } from '../world/Materials';
 import { zoneAt } from '../world/Terrain';
-import { CharacterModel, LOOKS } from '../entities/CharacterModel';
+import { SkinnedCharacter, OUTFITS, preloadCharacters } from '../entities/SkinnedCharacter';
 import { PlayerController } from '../entities/PlayerController';
 import { FollowCamera } from '../camera/FollowCamera';
 import { Hud } from '../ui/Hud';
@@ -33,6 +36,7 @@ export class Game {
   private player!: PlayerController;
   private follow!: FollowCamera;
   private hud = new Hud();
+  private post!: PostFX;
   private spit: THREE.Object3D | undefined;
   private fastTime = false;
   private params = new URLSearchParams(location.search);
@@ -42,7 +46,8 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMapping = THREE.NoToneMapping; // tone mapping happens in PostFX
+    setMaxAnisotropy(this.renderer.capabilities.getMaxAnisotropy());
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.input = new Input(canvas);
     window.addEventListener('resize', () => this.resize());
@@ -52,13 +57,19 @@ export class Game {
   private resize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
+    this.post?.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
 
   async load(): Promise<void> {
     const loading = new LoadingScreen();
-    const builder = new CityBuilder();
+    loading.progress(0.02, 'טוענים טקסטורות…');
+    const [, , chair, lamp, bin] = await Promise.all([
+      loadTextures(['plaster', 'jstone', 'asphalt', 'pavers', 'sand', 'rock', 'slabs'], (p) => loading.progress(p * 0.15)),
+      preloadCharacters(), loadModel('chair'), loadModel('lamp'), loadModel('bin', (n) => n === 'metal_trash_can' || (n.startsWith('metal_trash_can_') && !n.includes('rust'))),
+    ]);
+    const builder = new CityBuilder({ chair, lamp, bin });
     const steps = builder.steps();
     for (let i = 0; i < steps.length; i++) {
       loading.progress(i / (steps.length + 2), steps[i].label);
@@ -70,26 +81,30 @@ export class Game {
     this.scene.add(buildSea());
     this.spit = this.scene.getObjectByName('shawarma-spit');
 
-    this.dayNight = new DayNight(this.scene, this.renderer);
+    const low = this.params.get('quality') === 'low';
+    if (low) this.renderer.setPixelRatio(1);
+    this.dayNight = new DayNight(this.scene, this.renderer, low ? 1024 : 2048);
     const hour = Number(this.params.get('hour'));
     this.dayNight.hour = Number.isFinite(hour) && this.params.has('hour') ? hour : 16.9;
     this.dayNight.speed = 0.5;
     loading.progress((steps.length + 1) / (steps.length + 2));
     await nextFrame();
 
-    const model = new CharacterModel(LOOKS[this.params.get('char') === 'noa' ? 'noa' : 'avi']);
+    const model = await SkinnedCharacter.create(OUTFITS[this.params.get('char') === 'noa' ? 'noa' : 'avi']);
     this.scene.add(model.root);
     this.player = new PlayerController(model, this.city.colliders);
     const sp = SPAWNS[this.params.get('spawn') ?? 'beach'] ?? SPAWNS.beach;
     this.player.spawn(sp.x, sp.z, sp.yaw);
     this.follow = new FollowCamera(this.camera, this.city.colliders);
     this.follow.snap(this.player.position, sp.yaw);
+    this.post = new PostFX(this.renderer, this.scene, this.camera, (this.params.get('quality') as 'low' | 'high' | null) ?? 'high');
+    this.resize();
 
     // warm up: compile shaders + one render so the first frame doesn't hitch
     this.dayNight.update(0, this.player.position);
-    this.follow.update(0.016, { moveX: 0, moveY: 0, lookX: 0, lookY: 0, run: false, jump: false, zoom: 0 }, this.player.position, this.player.yaw, 0);
+    this.follow.update(0.016, { moveX: 0, moveY: 0, lookX: 0, lookY: 0, run: false, walk: false, jump: false, zoom: 0 }, this.player.position, this.player.yaw, 0);
     await this.renderer.compileAsync(this.scene, this.camera);
-    this.renderer.render(this.scene, this.camera);
+    this.post.render(0.016);
     loading.progress(1);
 
     gameStore.setState({ phase: 'title' });
@@ -102,6 +117,7 @@ export class Game {
 
     // debug handle for automated tests / console tinkering
     (window as unknown as { __game: Game }).__game = this;
+    (window as unknown as { __THREE: typeof THREE }).__THREE = THREE;
   }
 
   /** Debug: teleport to a named spawn or coordinates. */
@@ -137,6 +153,7 @@ export class Game {
     // night-lit materials (lamps, signs, string lights)
     const n = worldUniforms.uNight.value;
     for (const { mat, max } of this.city.nightMaterials) mat.emissiveIntensity = 0.05 + n * max;
+    this.city.lightPools.opacity = n * 0.9;
     if (this.spit) this.spit.rotation.y += dt * 1.5;
 
     const p = this.player.position;
@@ -145,7 +162,8 @@ export class Game {
     this.hud.update(rawDt, this.dayNight.timeString, zone, this.fastTime);
     gameStore.setState({ hour: this.dayNight.hour, fps: this.hud.currentFps });
 
-    this.renderer.render(this.scene, this.camera);
+    this.post.update(this.dayNight.exposure, this.dayNight.golden, worldUniforms.uNight.value);
+    this.post.render(dt);
     this.input.endFrame();
   }
 }

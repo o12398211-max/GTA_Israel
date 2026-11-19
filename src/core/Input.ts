@@ -8,6 +8,7 @@ export interface InputState {
   lookX: number; // accumulated delta this frame (radians-ish)
   lookY: number;
   run: boolean;
+  walk: boolean;
   jump: boolean; // edge-triggered (true one frame)
   zoom: number; // wheel delta this frame
 }
@@ -61,6 +62,7 @@ export class Input {
     lx += ((k.has('ArrowRight') ? 1 : 0) - (k.has('ArrowLeft') ? 1 : 0)) * 2.2 * dt;
     ly += ((k.has('ArrowDown') ? 1 : 0) - (k.has('ArrowUp') ? 1 : 0)) * 1.5 * dt;
     let run = k.has('ShiftLeft') || k.has('ShiftRight');
+    const walk = k.has('AltLeft') || k.has('ControlLeft') || k.has('KeyC');
     let jump = this.pressed.has('Space');
     let zoom = this.wheel;
 
@@ -83,7 +85,7 @@ export class Input {
     const len = Math.hypot(mx, my);
     if (len > 1) { mx /= len; my /= len; }
     if (this.invertY) ly = -ly;
-    return { moveX: mx, moveY: my, lookX: lx, lookY: ly, run, jump, zoom };
+    return { moveX: mx, moveY: my, lookX: lx, lookY: ly, run, walk: walk || (pad != null && Math.hypot(mx, my) < 0.55 && Math.hypot(mx, my) > 0), jump, zoom };
   }
 
   endFrame(): void {

@@ -93,3 +93,17 @@ export class Instancer {
     return mesh;
   }
 }
+
+/** Several Instancers sharing the same transforms (multi-part models like trees). */
+export class MultiInstancer {
+  readonly parts: Instancer[];
+  constructor(kit: { parts: { geometry: THREE.BufferGeometry; material: THREE.Material }[] }, opts: { castShadow?: boolean; name?: string } = {}) {
+    this.parts = kit.parts.map((p, i) => new Instancer(p.geometry, p.material, { ...opts, name: `${opts.name ?? 'multi'}-${i}` }));
+  }
+  get count() { return this.parts[0].count; }
+  add(x: number, y: number, z: number, sx = 1, sy = 1, sz = 1, rotY = 0, color?: THREE.ColorRepresentation): this {
+    for (const p of this.parts) p.add(x, y, z, sx, sy, sz, rotY, color);
+    return this;
+  }
+  build(): THREE.InstancedMesh[] { return this.parts.map((p) => p.build()); }
+}

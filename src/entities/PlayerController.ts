@@ -2,11 +2,15 @@ import * as THREE from 'three';
 import type { InputState } from '../core/Input';
 import type { AABB, ColliderWorld } from '../world/Colliders';
 import { terrainHeight, WORLD } from '../world/Terrain';
-import { CharacterModel } from './CharacterModel';
+/** Anything that can visualize the player (procedural fallback or skinned GLTF). */
+export interface CharacterView {
+  root: THREE.Object3D;
+  update(dt: number, speed: number, grounded: boolean, vy: number, swimming?: boolean): void;
+}
 
 const GRAVITY = -24;
 const JUMP_V = 7.6;
-const WALK = 2.8, RUN = 7.2, SWIM = 1.9, SWIM_FAST = 3.4;
+const WALK = 1.6, JOG = 3.8, RUN = 6.6, SWIM = 1.6, SWIM_FAST = 2.8;
 const RADIUS = 0.35, HEIGHT = 1.8, STEP = 0.45;
 const CLIMB_MAX = 2.3; // ledge height you can climb (vault) onto
 const SWIM_DEPTH = 1.15; // water depth at which you start swimming
@@ -28,7 +32,7 @@ export class PlayerController {
   private coyote = 0;
   private climb: { from: THREE.Vector3; to: THREE.Vector3; t: number } | null = null;
 
-  constructor(readonly model: CharacterModel, private colliders: ColliderWorld) {}
+  constructor(readonly model: CharacterView, private colliders: ColliderWorld) {}
 
   get speed(): number { return Math.hypot(this.velocity.x, this.velocity.z); }
   get isClimbing(): boolean { return this.climb !== null; }
@@ -61,7 +65,7 @@ export class PlayerController {
     const waterDepth = WORLD.seaLevel - terrainHeight(this.position.x, this.position.z);
     this.swimming = waterDepth > SWIM_DEPTH && this.position.y < WORLD.seaLevel + SWIM_FEET + 0.3;
 
-    const maxSpeed = this.swimming ? (input.run ? SWIM_FAST : SWIM) : (input.run ? RUN : WALK);
+    const maxSpeed = this.swimming ? (input.run ? SWIM_FAST : SWIM) : (input.run ? RUN : input.walk ? WALK : JOG);
     const accel = this.grounded || this.swimming ? 14 : 3.5;
     const tvx = dx * maxSpeed * mag, tvz = dz * maxSpeed * mag;
     const a = 1 - Math.exp(-accel * dt);

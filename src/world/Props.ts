@@ -147,3 +147,12 @@ export function benchGeometry(): THREE.BufferGeometry {
     colored(new THREE.BoxGeometry(0.08, 0.45, 0.45).translate(0.8, 0.22, 0), 0x333333),
   ]);
 }
+
+/** Split-AC outdoor unit – hangs under half the windows in the country. */
+export function acUnitGeometry(): THREE.BufferGeometry {
+  const body = colored(new THREE.BoxGeometry(0.82, 0.56, 0.3).translate(0, 0.28, 0.17), 0xe9e7e0);
+  const grill = colored(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 16).rotateX(Math.PI / 2).translate(-0.15, 0.28, 0.33), 0x55585c);
+  const bracket = colored(new THREE.BoxGeometry(0.7, 0.04, 0.34).translate(0, -0.02, 0.17), 0x777777);
+  const pipe = colored(new THREE.CylinderGeometry(0.015, 0.015, 0.9, 5).translate(0.36, -0.2, 0.05), 0xdddddd);
+  return merge([body, grill, bracket, pipe]);
+}
