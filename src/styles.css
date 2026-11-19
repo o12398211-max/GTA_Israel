@@ -253,3 +253,27 @@ html, body {
 .vi-logo-screen .slogan { font-size: 44px; font-weight: 900; text-align: center; line-height: 1.15; text-shadow: 0 0 18px rgba(0,0,0,.4), 2px 2px 0 #3b0d4f; }
 .vi-logo-screen .credits { text-align: center; font-size: 17px; opacity: .92; } .vi-logo-screen .credits p { margin: 4px 0; } .vi-logo-screen .credits .small { font-size: 13px; opacity: .8; }
 .vi-logo-screen .continue { font: 18px var(--font-he); color: #fff; padding: 10px 26px; border-radius: 999px; border: 2px solid #fff; background: rgba(0,0,0,.25); cursor: pointer; }
+
+/* ---------- menu / multiplayer ---------- */
+#menu { position: fixed; inset: 0; z-index: 9; display: none; align-items: center; justify-content: center; background: rgba(8, 3, 16, .55); backdrop-filter: blur(6px); }
+#menu.open { display: flex; }
+#menu .panel { width: min(520px, 94vw); max-height: 90vh; overflow: auto; background: linear-gradient(160deg, rgba(43,16,85,.96), rgba(20,8,34,.96)); border: 1px solid rgba(255,79,163,.5); border-radius: 18px; padding: 20px 22px; }
+#menu .logo-sm { font-family: var(--font-gta); font-size: 34px; direction: ltr; text-align: center; background: linear-gradient(180deg,#ffd36e,#ff5fa8 50%,#8a2be2); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#menu .logo-sm span { font-family: 'Brush Script MT', cursive; font-style: italic; }
+#menu h2 { text-align: center; margin: 0 0 10px; }
+#menu .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+#menu .tab { flex: 1; padding: 8px; border: 0; border-radius: 10px; background: rgba(255,255,255,.08); color: #fff; font: 15px var(--font-he); cursor: pointer; }
+#menu .tab.on { background: var(--pink); }
+#menu label { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0; font-size: 15px; }
+#menu input[type=range] { width: 50%; } #menu input:not([type]), #menu select { width: 55%; padding: 6px 8px; border-radius: 8px; border: 1px solid #555; background: #1b1026; color: #fff; font: 14px var(--font-he); }
+#menu .note { font-size: 13px; opacity: .85; background: rgba(0,0,0,.25); padding: 6px 10px; border-radius: 8px; }
+#menu button.resume, #menu .cn, #menu .dc, #menu .reload, #menu .reset { width: 100%; margin-top: 12px; padding: 10px; border: 0; border-radius: 12px; font: bold 16px var(--font-he); cursor: pointer; color: #fff; background: linear-gradient(90deg, var(--violet), var(--pink)); }
+#menu .reset { background: rgba(255,80,80,.25); font-weight: normal; }
+#menu .keys { width: 100%; font-size: 14px; border-collapse: collapse; } #menu .keys td { padding: 5px; border-bottom: 1px solid rgba(255,255,255,.08); } #menu .keys td:first-child { color: var(--sunset); white-space: nowrap; }
+#chat { position: fixed; z-index: 6; left: 22px; bottom: 290px; width: 340px; display: none; direction: rtl; }
+#chat.on { display: block; }
+#chat .log div { font-size: 14px; background: rgba(0,0,0,.45); margin-top: 3px; padding: 3px 8px; border-radius: 6px; text-shadow: 1px 1px 0 #000; }
+#chat .log .sys { color: #ffd6a0; }
+#chat input { display: none; width: 100%; margin-top: 6px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--pink); background: rgba(10,4,20,.85); color: #fff; font: 14px var(--font-he); }
+#chat.typing input { display: block; }
+#net-info { position: fixed; z-index: 6; top: 40px; left: 12px; font-size: 13px; direction: rtl; text-shadow: 1px 1px 0 #000; }

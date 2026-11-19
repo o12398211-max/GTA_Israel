@@ -7,9 +7,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && tsc -p tsconfig.server.json && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.server.json",
+    "server": "node --experimental-strip-types server/index.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.21.0",
@@ -17,11 +18,14 @@
     "n8ao": "^2.1.0",
     "postprocessing": "^6.39.6",
     "three": "^0.187.0",
+    "ws": "^8.23.0",
     "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@types/howler": "^2.2.13",
+    "@types/node": "^26.6.6",
     "@types/three": "^0.187.0",
+    "@types/ws": "^8.18.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
   }

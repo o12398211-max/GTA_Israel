@@ -7,6 +7,8 @@ import { Activities } from './minigames/Activities';
 import { DialogSystem } from './story/Dialog';
 import { Cutscene } from './story/Cutscene';
 import { playIntro } from './story/Intro';
+import { NetClient } from './net/NetClient';
+import { Menu } from './ui/Menu';
 import { Matkot } from './minigames/Matkot';
 import { Brawl } from './minigames/Brawl';
 import { ShelterRun } from './minigames/Shelter';
@@ -31,6 +33,12 @@ if (!webgl2Available()) {
     g.missions = new MissionManager(g, buildMissions(g), g.phone);
     g.systems.push(g.missions);
     g.activities = new Activities(g);
+    const net = new NetClient(g);
+    g.systems.push(net);
+    const menu = new Menu(g, net);
+    g.phone.onOpenSettings = () => menu.toggle(true, 'settings');
+    g.systems.push({ update: (_dt, gm) => { if (gm.input.action('pause') && !gm.phone.open) menu.toggle(); else if (gm.input.action('pause') && gm.phone.open) gm.phone.toggle(false); } });
+    (window as unknown as { __net: NetClient }).__net = net;
     g.systems.push(g.activities);
     g.systems.push({
       update: (_dt, gm) => {
