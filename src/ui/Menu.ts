@@ -83,7 +83,7 @@ export class Menu {
         <button class="danger reset">${t.resetSave}</button>`;
     } else if (this.tab === 'multiplayer') {
       const params = new URLSearchParams(location.search);
-      const def = params.get('server') ?? localStorage.getItem('mp-server') ?? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname || 'localhost'}:8787`;
+      const def = params.get('server') ?? localStorage.getItem('mp-server') ?? (import.meta.env.VITE_MP_SERVER as string | undefined) ?? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname || 'localhost'}:8787`;
       body = `<p class="note">${t.mpHelp}</p>
         <label>${t.server} <input class="srv" value="${def}"></label>
         <label>${t.name} <input class="nm" maxlength="16" value="${localStorage.getItem('mp-name') ?? (gameStore.getState().character === 'noa' ? 'נועה' : 'אבי')}"></label>

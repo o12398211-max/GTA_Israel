@@ -129,6 +129,13 @@ npm run preview
 ### פריסה ל-GitHub Pages
 ה-workflow `.github/workflows/deploy.yml` בונה ומפרסם בכל push ל-`main`. צריך להפעיל פעם אחת: **Settings ← Pages ← Source: GitHub Actions**.
 
+### פריסה ל-Render
+בריפו יש `render.yaml` (Blueprint) שמקים שני שירותים:
+- `gta-israel`: המשחק כאתר סטטי
+- `gta-israel-server`: שרת המולטיפלייר (Docker)
+
+ב-Render: **New ← Blueprint**, בוחרים את הריפו ואת הענף `main`, נותנים שם ומאשרים. אם Render נתן לשרת כתובת אחרת מ-`gta-israel-server.onrender.com`, מעדכנים את `VITE_MP_SERVER` בשירות `gta-israel` ומריצים deploy מחדש. בתוכנית החינמית השרת "נרדם" אחרי חוסר פעילות, וההתחברות הראשונה לוקחת כחצי דקה.
+
 ## שליטה
 
 | פעולה | מקלדת ועכבר | שלט |

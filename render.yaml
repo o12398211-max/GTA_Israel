@@ -1,0 +1,23 @@
+# Render Blueprint: the game (static site) + the multiplayer server (Docker web service)
+services:
+  - type: web
+    name: gta-israel-server
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    autoDeploy: true
+
+  - type: web
+    name: gta-israel
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # default multiplayer server shown in the menu (change if Render gives the server a different URL)
+      - key: VITE_MP_SERVER
+        value: wss://gta-israel-server.onrender.com

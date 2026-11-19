@@ -11,6 +11,7 @@
  * it keeps its own authoritative position and tells the client to reconcile.
  * Server also owns hit detection (arena), race checkpoints and timing, chat.
  */
+import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { terrainHeight, WORLD } from '../shared/terrain.ts';
 import type { ClientMsg, ServerMsg, NetPlayer, GameMode, RaceState } from '../shared/protocol.ts';
@@ -176,7 +177,13 @@ setInterval(() => {
   }
 }, 1000 / TICK_HZ);
 
-const wss = new WebSocketServer({ port: PORT });
+// plain HTTP answers health checks (Render, Docker, load balancers); WebSocket upgrades go to ws
+const http = createServer((_req, res) => {
+  res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*' });
+  res.end(`GTA VI: Israel server – ${rooms.size} rooms\n`);
+});
+const wss = new WebSocketServer({ server: http });
+http.listen(PORT);
 wss.on('connection', (ws) => {
   const id = String(nextId++);
   const c: Client = {
