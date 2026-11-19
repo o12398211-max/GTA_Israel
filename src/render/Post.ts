@@ -45,9 +45,8 @@ class GradeEffect extends Effect {
 }
 
 /**
- * Camera effects in one convolution pass: directional + radial motion blur
- * (from camera rotation / forward speed) and heat haze (shimmer near the
- * horizon on hot afternoons in Jerusalem / on the Ayalon asphalt).
+ * Heat haze (shimmer near the horizon on hot afternoons in Jerusalem / on the
+ * Ayalon asphalt). No motion blur – the image stays sharp while the camera moves.
  */
 class CameraFXEffect extends Effect {
   constructor() {
@@ -63,18 +62,6 @@ class CameraFXEffect extends Effect {
           q.y += cos(uv.x * 120.0 + time * 4.0) * 0.0008 * haze * band;
         }
         vec4 c = texture2D(inputBuffer, q);
-        float amt = length(blurDir) + zoom;
-        if (amt > 0.0005) {
-          vec2 toC = q - 0.5;
-          float edge = smoothstep(0.05, 0.6, length(toC));
-          vec4 acc = c; float w = 1.0;
-          for (int i = 1; i <= 7; i++) {
-            float t = float(i) / 7.0 + hn(q * 917.0 + float(i)) * 0.08;
-            vec2 off = blurDir * t + toC * zoom * t * edge;
-            acc += texture2D(inputBuffer, q - off); w += 1.0;
-          }
-          c = acc / w;
-        }
         outputColor = c;
       }`, {
       attributes: EffectAttribute.CONVOLUTION,
@@ -106,7 +93,7 @@ export class PostFX {
     this.ao.configuration.gammaCorrection = false;
     this.ao.setQualityMode('Medium');
     if (quality === 'high') this.composer.addPass(this.ao);
-    this.bloom = new BloomEffect({ mipmapBlur: true, luminanceThreshold: 0.85, luminanceSmoothing: 0.25, intensity: 0.9, radius: 0.75 });
+    this.bloom = new BloomEffect({ mipmapBlur: true, luminanceThreshold: 0.92, luminanceSmoothing: 0.2, intensity: 0.5, radius: 0.6 });
     const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
     const vignette = new VignetteEffect({ offset: 0.3, darkness: 0.55, blendFunction: BlendFunction.NORMAL });
     this.composer.addPass(new EffectPass(camera, this.bloom, this.exposure, tone, this.grade, vignette));
@@ -130,7 +117,7 @@ export class PostFX {
     this.exposure.exposure = exposure;
     this.grade.strength = 0.5 + golden * 0.8 + night * 0.4;
     this.grade.night = night;
-    this.bloom.intensity = 0.6 + night * 0.9;
+    this.bloom.intensity = 0.35 + night * 0.7;
   }
 
   render(dt: number) { this.composer.render(dt); }

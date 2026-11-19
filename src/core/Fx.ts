@@ -105,7 +105,7 @@ export class FxSystem implements GameSystem {
     // heat haze: hamsin, or hot afternoons in Jerusalem / over the Ayalon asphalt
     const zone = zoneAt(p.x, p.z);
     const hot = THREE.MathUtils.clamp(1 - Math.abs(g.dayNight.hour - 14) / 4, 0, 1) * (zone === 'jerusalem' || zone === 'ayalon' || zone === 'route1' ? 0.6 : 0);
-    g.post.setCameraFX(blur, zoom, Math.max(this.weather === 'hamsin' ? 1 : 0, hot), performance.now() / 1000);
+    g.post.setCameraFX(blur.set(0, 0), 0 * zoom, this.weather === 'hamsin' ? 0.6 + hot * 0.4 : 0, performance.now() / 1000);
 
     // shadow map throttling: refresh when the player moved, plus a steady cadence
     const q = g.quality;
