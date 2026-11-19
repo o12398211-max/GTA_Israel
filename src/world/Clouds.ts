@@ -7,6 +7,7 @@ import * as THREE from 'three';
 export class Clouds {
   readonly mesh: THREE.Mesh;
   private mat: THREE.ShaderMaterial;
+  cover = 0.48;
 
   constructor() {
     this.mat = new THREE.ShaderMaterial({
@@ -68,6 +69,7 @@ export class Clouds {
     u.uSunColor.value.copy(sunColor);
     u.uSky.value.copy(sky);
     u.uNight.value = night;
+    u.uCover.value += (0.96 - this.cover * 1.0 - u.uCover.value) * 0.02;
     this.mesh.position.copy(focus);
   }
 }

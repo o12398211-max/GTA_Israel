@@ -59,7 +59,7 @@ export class Game {
   characters: Partial<Record<CharacterId, SkinnedCharacter>> = {};
   follow!: FollowCamera;
   hud = new Hud();
-  private post!: PostFX;
+  post!: PostFX;
   private spit: THREE.Object3D | undefined;
   private fastTime = false;
   readonly params = new URLSearchParams(location.search);
@@ -131,11 +131,12 @@ export class Game {
 
     loading.progress(0.8, 'מגייסים הולכי רגל…');
     await nextFrame();
-    this.peds = await Pedestrians.create(this.quality === 'low' ? 12 : 22, 3);
+    this.peds = await Pedestrians.create(this.quality === 'low' ? 12 : this.quality === 'medium' ? 16 : 22, 3);
     this.scene.add(this.peds.group);
 
     const low = this.quality === 'low';
-    if (low) this.renderer.setPixelRatio(1);
+    if (low) this.renderer.setPixelRatio(0.75);
+    else if (this.quality === 'medium') this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
     this.dayNight = new DayNight(this.scene, this.renderer, low ? 1024 : 2048);
     const hour = Number(this.params.get('hour'));
     this.dayNight.hour = Number.isFinite(hour) && this.params.has('hour') ? hour : 16.9;

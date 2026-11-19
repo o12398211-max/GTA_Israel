@@ -237,8 +237,11 @@ export class Traffic {
   private _q = new THREE.Quaternion();
   private _p = new THREE.Vector3();
   private _s = new THREE.Vector3(1, 1, 1);
+  private _zero = new THREE.Vector3(0, 0, 0);
   private _wm = new THREE.Matrix4();
   private _full = new THREE.Matrix4();
+  /** camera position for distance culling (cars beyond 420 m are collapsed) */
+  viewer = new THREE.Vector3();
   private writeTransforms() {
     const up = new THREE.Vector3(0, 1, 0);
     for (const car of this.cars) {
@@ -255,7 +258,8 @@ export class Traffic {
       this._q.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
       car.body.setNextKinematicTranslation({ x, y, z });
       car.body.setNextKinematicRotation(this._q);
-      this._m.compose(this._p.set(x, y, z), this._q, this._s);
+      const far = Math.hypot(x - this.viewer.x, z - this.viewer.z) > 420;
+      this._m.compose(this._p.set(x, y, z), this._q, far ? this._zero : this._s);
       const mm = this.meshes.get(car.type)!;
       for (const im of mm.parts) im.setMatrixAt(car.slot, this._m);
       car.kit.wheels.forEach((w, wi) => {

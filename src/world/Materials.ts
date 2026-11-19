@@ -198,6 +198,9 @@ export function createFacadeMaterial(style: FacadeStyle): THREE.MeshStandardMate
             if (!shop && rBld > 0.55) { w0.x = 0.15; w1.x = cellSz.x - 0.15; }
           #endif
 
+          // LOD: parallax + interior mapping only up close
+          bool nearCam = distance(cameraPosition, vFWPos) < 230.0;
+          if (!nearCam) recess = 0.0;
           vec2 pb = lc - vt.xy / vt.z * recess;
           bool inO = validCell && all(greaterThan(lc, w0)) && all(lessThan(lc, w1));
           bool inI = validCell && all(greaterThan(pb, w0)) && all(lessThan(pb, w1));
@@ -251,7 +254,8 @@ export function createFacadeMaterial(style: FacadeStyle): THREE.MeshStandardMate
             } else {
               vec3 rd = normalize(vec3(-vt.x, -vt.y, vt.z));
               float lm;
-              vec3 ic = interior(pb, rd, cellSz, r * 17.0 + vFSeed, lm);
+              vec3 ic = vec3(0.4, 0.38, 0.35); lm = 1.0;
+              if (nearCam) ic = interior(pb, rd, cellSz, r * 17.0 + vFSeed, lm);
               #ifdef KIND_TOWER
                 ic = mix(ic, vec3(0.75, 0.8, 0.85), 0.4);
               #endif

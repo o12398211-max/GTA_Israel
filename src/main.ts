@@ -9,6 +9,8 @@ import { Cutscene } from './story/Cutscene';
 import { playIntro } from './story/Intro';
 import { NetClient } from './net/NetClient';
 import { Menu } from './ui/Menu';
+import { FxSystem } from './core/Fx';
+import { TouchControls } from './ui/TouchControls';
 import { Matkot } from './minigames/Matkot';
 import { Brawl } from './minigames/Brawl';
 import { ShelterRun } from './minigames/Shelter';
@@ -33,6 +35,10 @@ if (!webgl2Available()) {
     g.missions = new MissionManager(g, buildMissions(g), g.phone);
     g.systems.push(g.missions);
     g.activities = new Activities(g);
+    const fx = new FxSystem(g);
+    g.systems.push(fx);
+    (window as unknown as { __fx: FxSystem }).__fx = fx;
+    if (TouchControls.wanted()) { new TouchControls(g.input); document.body.classList.add('touch'); }
     const net = new NetClient(g);
     g.systems.push(net);
     const menu = new Menu(g, net);

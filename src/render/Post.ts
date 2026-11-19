@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {
   EffectComposer, RenderPass, EffectPass, BloomEffect, SMAAEffect, ToneMappingEffect, ToneMappingMode,
-  VignetteEffect, Effect, BlendFunction,
+  VignetteEffect, Effect, BlendFunction, EffectAttribute,
 } from 'postprocessing';
 import { N8AOPostPass } from 'n8ao';
 
@@ -44,12 +44,53 @@ class GradeEffect extends Effect {
   set night(v: number) { this.uniforms.get('night')!.value = v; }
 }
 
+/**
+ * Camera effects in one convolution pass: directional + radial motion blur
+ * (from camera rotation / forward speed) and heat haze (shimmer near the
+ * horizon on hot afternoons in Jerusalem / on the Ayalon asphalt).
+ */
+class CameraFXEffect extends Effect {
+  constructor() {
+    super('CameraFX', /* glsl */ `
+      uniform vec2 blurDir; uniform float zoom; uniform float haze; uniform float time;
+      float hn(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+        vec2 q = uv;
+        // heat haze: stronger below the horizon line, animated
+        if (haze > 0.001) {
+          float band = smoothstep(0.65, 0.35, uv.y) * smoothstep(0.0, 0.25, uv.y);
+          q.x += sin(uv.y * 160.0 + time * 6.0) * 0.0012 * haze * band;
+          q.y += cos(uv.x * 120.0 + time * 4.0) * 0.0008 * haze * band;
+        }
+        vec4 c = texture2D(inputBuffer, q);
+        float amt = length(blurDir) + zoom;
+        if (amt > 0.0005) {
+          vec2 toC = q - 0.5;
+          float edge = smoothstep(0.05, 0.6, length(toC));
+          vec4 acc = c; float w = 1.0;
+          for (int i = 1; i <= 7; i++) {
+            float t = float(i) / 7.0 + hn(q * 917.0 + float(i)) * 0.08;
+            vec2 off = blurDir * t + toC * zoom * t * edge;
+            acc += texture2D(inputBuffer, q - off); w += 1.0;
+          }
+          c = acc / w;
+        }
+        outputColor = c;
+      }`, {
+      attributes: EffectAttribute.CONVOLUTION,
+      uniforms: new Map<string, THREE.Uniform>([['blurDir', new THREE.Uniform(new THREE.Vector2())], ['zoom', new THREE.Uniform(0)], ['haze', new THREE.Uniform(0)], ['time', new THREE.Uniform(0)]]),
+    });
+  }
+}
+
 export class PostFX {
   readonly composer: EffectComposer;
   private exposure = new ExposureEffect();
   private grade = new GradeEffect();
   private ao: N8AOPostPass;
   readonly bloom: BloomEffect;
+  private camfx = new CameraFXEffect();
+  motionBlur = true;
 
   constructor(private renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, quality: 'low' | 'high' = 'high') {
     renderer.toneMapping = THREE.NoToneMapping;
@@ -69,10 +110,21 @@ export class PostFX {
     const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
     const vignette = new VignetteEffect({ offset: 0.3, darkness: 0.55, blendFunction: BlendFunction.NORMAL });
     this.composer.addPass(new EffectPass(camera, this.bloom, this.exposure, tone, this.grade, vignette));
+    this.composer.addPass(new EffectPass(camera, this.camfx));
     this.composer.addPass(new EffectPass(camera, new SMAAEffect()));
+    this.motionBlur = quality !== 'low';
   }
 
   setSize(w: number, h: number) { this.composer.setSize(w, h); }
+
+  /** blur: screen-space blur vector + radial zoom amount; haze 0..1 */
+  setCameraFX(blur: THREE.Vector2, zoom: number, haze: number, time: number) {
+    const u = this.camfx.uniforms;
+    (u.get('blurDir')!.value as THREE.Vector2).copy(this.motionBlur ? blur : new THREE.Vector2());
+    u.get('zoom')!.value = this.motionBlur ? zoom : 0;
+    u.get('haze')!.value = haze;
+    u.get('time')!.value = time;
+  }
 
   update(exposure: number, golden: number, night: number) {
     this.exposure.exposure = exposure;

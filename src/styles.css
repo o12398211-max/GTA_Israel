@@ -277,3 +277,14 @@ html, body {
 #chat input { display: none; width: 100%; margin-top: 6px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--pink); background: rgba(10,4,20,.85); color: #fff; font: 14px var(--font-he); }
 #chat.typing input { display: block; }
 #net-info { position: fixed; z-index: 6; top: 40px; left: 12px; font-size: 13px; direction: rtl; text-shadow: 1px 1px 0 #000; }
+
+/* ---------- touch ---------- */
+#touch { position: fixed; inset: 0; z-index: 4; touch-action: none; }
+#touch .stick { position: absolute; left: 40px; bottom: 60px; top: auto; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.35); opacity: .55; }
+#touch .stick.on { opacity: 1; bottom: auto; }
+#touch .knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,79,163,.8); }
+#touch .btns { position: absolute; right: 16px; bottom: 24px; display: grid; grid-template-columns: repeat(3, 58px); gap: 10px; direction: ltr; }
+#touch button { width: 58px; height: 58px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); background: rgba(0,0,0,.35); color: #fff; font-size: 24px; }
+#touch button.on { background: rgba(255,79,163,.7); }
+body.touch .hud-radar { transform: scale(.7); transform-origin: top left; top: 12px; bottom: auto; }
+body.touch #hud-help { display: none; }

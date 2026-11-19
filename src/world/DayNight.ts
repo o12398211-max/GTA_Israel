@@ -21,6 +21,8 @@ export class DayNight {
   /** pre-tonemap exposure, golden-hour factor (read by post FX) */
   exposure = 1;
   golden = 0;
+  /** weather modifiers (set by the weather system) */
+  weather = { fogMul: 1, cover: 0.48, haze: 0, dim: 0 };
   /** game minutes per real second */
   speed = 1;
   private sunDir = new THREE.Vector3();
@@ -105,7 +107,7 @@ export class DayNight {
     const sunColor = new THREE.Color().setRGB(1, lerp(0.55, 0.96, smooth(this.sunDir.y, 0.0, 0.5)), lerp(0.35, 0.9, smooth(this.sunDir.y, 0.0, 0.6)));
     if (isMoon) sunColor.setRGB(0.55, 0.65, 1.0);
     this.sun.color.copy(sunColor);
-    this.sun.intensity = isMoon ? 0.35 * smooth(-this.sunDir.y, 0.0, 0.2) : 3.2 * smooth(this.sunDir.y, -0.02, 0.15);
+    this.sun.intensity = (1 - this.weather.dim * 0.7) * (isMoon ? 0.35 * smooth(-this.sunDir.y, 0.0, 0.2) : 3.2 * smooth(this.sunDir.y, -0.02, 0.15));
 
     this.hemi.color.setRGB(lerp(0.2, 0.72, day) + golden * 0.15, lerp(0.22, 0.8, day), lerp(0.45, 1.0, day));
     this.hemi.groundColor.setRGB(lerp(0.06, 0.5, day) + golden * 0.15, lerp(0.05, 0.4, day), lerp(0.1, 0.3, day));
@@ -115,15 +117,18 @@ export class DayNight {
     const fogDay = new THREE.Color(0xb9d3ea), fogGold = new THREE.Color(0xf6a98b), fogNight = new THREE.Color(0x1a1530);
     const fc = fogDay.clone().lerp(fogGold, golden).lerp(fogNight, worldUniforms.uNight.value);
     this.fog.color.copy(fc);
-    this.fog.near = lerp(180, 120, golden);
-    this.fog.far = lerp(1800, 1200, golden);
+    this.fog.near = lerp(180, 120, golden) / this.weather.fogMul;
+    this.fog.far = lerp(1800, 1200, golden) / this.weather.fogMul;
+    if (this.weather.haze > 0) this.fog.color.lerp(new THREE.Color(0xd9b98a), this.weather.haze * 0.5 * (1 - worldUniforms.uNight.value));
+    if (this.weather.dim > 0) this.fog.color.lerp(new THREE.Color(0x7d8794), this.weather.dim * 0.6);
     (this.stars.material as THREE.PointsMaterial).opacity = worldUniforms.uNight.value * 0.9;
     this.stars.position.copy(focus);
     // clouds: warm sunset light on the undersides, pinkish at golden hour
     const cloudSun = new THREE.Color().setRGB(1.0, lerp(0.62, 0.95, smooth(this.sunDir.y, 0.02, 0.5)), lerp(0.55, 0.92, smooth(this.sunDir.y, 0.02, 0.5)))
       .multiplyScalar(lerp(0.35, 1.25, day));
     if (golden > 0.2) cloudSun.lerp(new THREE.Color(1.0, 0.55, 0.62), golden * 0.45);
-    this.clouds.update(worldUniforms.uTime.value, this.sunDir, cloudSun, fc, worldUniforms.uNight.value, focus);
+    this.clouds.cover = this.weather.cover;
+    this.clouds.update(worldUniforms.uTime.value, this.sunDir, cloudSun.multiplyScalar(1 - this.weather.dim * 0.5), fc, worldUniforms.uNight.value, focus);
     this.exposure = lerp(0.9, 0.75, golden) * lerp(1, 2.3, worldUniforms.uNight.value);
     this.golden = golden;
 
