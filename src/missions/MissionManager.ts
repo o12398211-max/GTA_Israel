@@ -80,7 +80,11 @@ export class MissionManager implements GameSystem {
     this.replaying = replay;
     this.failed = null;
     this.stepIdx = -1;
-    if (gameStore.getState().character !== def.character) this.game.switchCharacter(def.character);
+    if (gameStore.getState().character !== def.character) {
+      this.game.switchCharacter(def.character);
+      this.game.player.spawn(def.start.x, def.start.z, this.game.player.yaw);
+      this.game.follow.snap(this.game.player.position, this.game.player.yaw);
+    }
     if (def.hour !== undefined) this.game.setHour(def.hour);
     this.game.hud.showSplash(def.title, def.titleEn, '#ffffff', 3);
     this.ctx = { game: this.game, mm: this, dt: 0, t: 0, data: {} };
@@ -94,6 +98,7 @@ export class MissionManager implements GameSystem {
     this.stepIdx++;
     if (this.stepIdx >= def.steps.length) { this.pass(); return; }
     c.t = 0;
+    this.game.hud.setObjective(null);
     const r = def.steps[this.stepIdx].enter?.(c);
     if (r instanceof Promise) {
       this.stepPending = true;
@@ -101,6 +106,10 @@ export class MissionManager implements GameSystem {
       r.then(() => { if (this.stepIdx === idx) this.stepPending = false; }, (e) => { console.error(e); this.stepPending = false; });
     }
   }
+
+  /** Debug / tests: force the current step to complete. */
+  debugSkip() { if (this.active) this.advance(); }
+  get stepIndex() { return this.stepIdx; }
 
   fail(reason?: string) {
     const def = this.active;

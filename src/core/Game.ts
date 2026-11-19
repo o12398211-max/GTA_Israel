@@ -20,6 +20,11 @@ import { VehicleSystem } from '../vehicles/VehicleSystem';
 import { Traffic } from '../vehicles/Traffic';
 import type { Vehicle } from '../vehicles/Vehicle';
 import { AudioSystem } from '../audio/Audio';
+import type { Phone } from '../ui/Phone';
+import type { MissionManager } from '../missions/MissionManager';
+import type { Activities } from '../minigames/Activities';
+import type { DialogSystem } from '../story/Dialog';
+import type { Cutscene } from '../story/Cutscene';
 
 /** Named spawn points – also usable via URL: ?spawn=jerusalem */
 export const SPAWNS: Record<string, { x: number; z: number; yaw: number }> = {
@@ -59,6 +64,12 @@ export class Game {
   private fastTime = false;
   readonly params = new URLSearchParams(location.search);
   readonly systems: GameSystem[] = [];
+  // attached by main.ts after loading
+  phone!: Phone;
+  missions!: MissionManager;
+  activities!: Activities;
+  dialog!: DialogSystem;
+  cutscene!: Cutscene;
   /** set by cutscenes: disables player control + follow camera */
   cinematic = false;
   /** last frame input (for systems) */
@@ -299,7 +310,7 @@ export class Game {
     const sprinting = !cur && inp.run && this.player.speed > 4;
     gameStore.setState({ energy: THREE.MathUtils.clamp(gameStore.getState().energy + (sprinting ? -9 : 6) * dt, 0, 100) });
 
-    for (const s of this.systems) s.update(dt, this);
+    for (const s of [...this.systems]) s.update(dt, this);
 
     // camera
     if (!this.cinematic) {

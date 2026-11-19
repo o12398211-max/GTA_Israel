@@ -4,6 +4,9 @@ import { MissionManager } from './missions/MissionManager';
 import { buildMissions } from './missions/missions';
 import { gameStore } from './state/store';
 import { Activities } from './minigames/Activities';
+import { DialogSystem } from './story/Dialog';
+import { Cutscene } from './story/Cutscene';
+import { playIntro } from './story/Intro';
 import { Matkot } from './minigames/Matkot';
 import { Brawl } from './minigames/Brawl';
 import { ShelterRun } from './minigames/Shelter';
@@ -16,9 +19,6 @@ function webgl2Available(): boolean {
   try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; }
 }
 
-declare module './core/Game' {
-  interface Game { phone: Phone; missions: MissionManager; activities: Activities }
-}
 
 if (!webgl2Available()) {
   document.getElementById('loading-tip')!.textContent = 'הדפדפן שלך לא תומך ב-WebGL2. גם הרכבת לירושלים לא תמיד מגיעה, אבל הפעם זה עליך.';
@@ -26,7 +26,9 @@ if (!webgl2Available()) {
   const game = new Game(canvas);
   game.load(async (g) => {
     g.phone = new Phone();
-    g.missions = new MissionManager(g, buildMissions(), g.phone);
+    g.dialog = new DialogSystem(g);
+    g.cutscene = new Cutscene(g);
+    g.missions = new MissionManager(g, buildMissions(g), g.phone);
     g.systems.push(g.missions);
     g.activities = new Activities(g);
     g.systems.push(g.activities);
@@ -42,6 +44,9 @@ if (!webgl2Available()) {
     });
     (window as unknown as { __mg: unknown }).__mg = { Matkot, Brawl, ShelterRun, AyalonJam, StadiumRhythm };
     gameStore.getState().notify('msg', 'אמא ❤️', 'אבי חמוד, אל תשכח: היום בערב האירוע בירושלים!');
+  }).then(() => {
+    const p = new URLSearchParams(location.search);
+    if (gameStore.getState().missionIndex === 0 && !p.has('nointro') && !p.has('autostart')) void playIntro(game);
   }).catch((err) => {
     console.error(err);
     document.getElementById('loading-tip')!.textContent = `שגיאה בטעינה: ${err?.message ?? err}`;

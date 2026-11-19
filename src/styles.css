@@ -230,3 +230,26 @@ html, body {
 .shop-menu button i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; }
 .shop-menu button span { flex: 1; text-align: right; } .shop-menu button b { color: #ffcf40; }
 .shop-menu .close { margin-top: 12px; justify-content: center; background: rgba(255,255,255,.15); }
+
+/* ---------- cinematics ---------- */
+#letterbox .top, #letterbox .bot { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 7; transition: height .6s; pointer-events: none; }
+#letterbox .top { top: 0; } #letterbox .bot { bottom: 0; }
+#letterbox.on .top, #letterbox.on .bot { height: 11vh; }
+#fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 7; }
+#cine-title { position: fixed; z-index: 8; left: 6vw; bottom: 15vh; opacity: 0; transition: opacity .8s, transform .8s; transform: translateY(10px); pointer-events: none; text-align: right; }
+#cine-title.on { opacity: 1; transform: none; }
+#cine-title .t { font-family: var(--font-gta); font-size: 58px; font-weight: 900; background: linear-gradient(180deg, #ffe08a, #ff5fa8 60%, #9b4dff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(2px 2px 0 #000); }
+#cine-title .s { font-size: 22px; text-shadow: 2px 2px 0 #000; }
+#cine-skip { position: fixed; z-index: 8; bottom: 12px; left: 16px; font-size: 13px; opacity: 0; transition: opacity .4s; pointer-events: none; }
+#cine-skip.on { opacity: .7; }
+#hud.cine > *:not(.hud-subtitle) { opacity: 0 !important; transition: opacity .4s; }
+#hud.cine .hud-subtitle { bottom: 13vh; z-index: 9; }
+.vi-logo-screen { position: fixed; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+  background: radial-gradient(ellipse at 50% 120%, #3b0d4f 0%, #12051d 55%, #000 100%); opacity: 0; transition: opacity 1s; }
+.vi-logo-screen.show { opacity: 1; } .vi-logo-screen.hide { opacity: 0; }
+.vi-logo-screen .logo { transform: scale(.92); transition: transform 3.5s ease-out; } .vi-logo-screen.show .logo { transform: scale(1.04); }
+.vi-logo-screen .presents { font-size: 20px; opacity: .8; letter-spacing: .05em; }
+.vi-logo-screen.ending { background: linear-gradient(180deg, #2b1055 0%, #7b2ff7 35%, #ff5fa8 75%, #ffb347 100%); }
+.vi-logo-screen .slogan { font-size: 44px; font-weight: 900; text-align: center; line-height: 1.15; text-shadow: 0 0 18px rgba(0,0,0,.4), 2px 2px 0 #3b0d4f; }
+.vi-logo-screen .credits { text-align: center; font-size: 17px; opacity: .92; } .vi-logo-screen .credits p { margin: 4px 0; } .vi-logo-screen .credits .small { font-size: 13px; opacity: .8; }
+.vi-logo-screen .continue { font: 18px var(--font-he); color: #fff; padding: 10px 26px; border-radius: 999px; border: 2px solid #fff; background: rgba(0,0,0,.25); cursor: pointer; }
