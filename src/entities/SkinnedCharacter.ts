@@ -22,12 +22,14 @@ export interface Outfit {
   beard: boolean;
 }
 
-export const OUTFITS: Record<'avi' | 'noa', Outfit> = {
+export const OUTFITS: Record<'avi' | 'noa' | 'police', Outfit> = {
   avi: { body: 'male', height: 1.78, shirt: new THREE.Color(0xf4f3ee), pants: new THREE.Color(0x2c3e5c), shoes: new THREE.Color(0x2a2a2c), sleeves: 'rolled', crop: false, shorts: false, beard: true },
+  police: { body: 'male', height: 1.82, shirt: new THREE.Color(0x1c2a4a), pants: new THREE.Color(0x141a26), shoes: new THREE.Color(0x0d0d0d), sleeves: 'short', crop: false, shorts: false, beard: false },
   noa: { body: 'female', height: 1.66, shirt: new THREE.Color(0x151515), pants: new THREE.Color(0x6f93c0), shoes: new THREE.Color(0xf2f2f2), sleeves: 'none', crop: true, shorts: true, beard: false },
 };
 
 const BASE = `${import.meta.env.BASE_URL}assets/characters/`;
+const regionGeoCache = new Map<string, THREE.BufferGeometry>();
 const loader = new GLTFLoader();
 const cache = new Map<string, Promise<GLTF>>();
 const load = (f: string) => {
@@ -40,8 +42,9 @@ export async function preloadCharacters(): Promise<void> {
   await Promise.all(['Superhero_Male_FullBody.gltf', 'Superhero_Female_FullBody.gltf', 'animations.glb', 'Hair_Beard.gltf', 'Hair_SimpleParted.gltf', 'Eyebrows_Regular.gltf', 'Eyebrows_Female.gltf'].map(load));
 }
 
-type State = 'idle' | 'walk' | 'jog' | 'sprint' | 'jumpStart' | 'jumpLoop' | 'jumpLand' | 'swimIdle' | 'swim' | 'drive' | 'talk' | 'punch' | 'dance' | 'hit';
+export type State = 'idle' | 'walk' | 'jog' | 'sprint' | 'jumpStart' | 'jumpLoop' | 'jumpLand' | 'swimIdle' | 'swim' | 'drive' | 'talk' | 'punch' | 'dance' | 'hit' | 'sit' | 'death' | 'roll' | 'jab' | 'crouch' | 'interact' | 'pickup';
 const CLIPS: Record<State, string> = {
+  sit: 'Sitting_Idle_Loop', death: 'Death01', roll: 'Roll', jab: 'Punch_Jab', crouch: 'Crouch_Idle_Loop', interact: 'Interact', pickup: 'PickUp_Table',
   idle: 'Idle_Loop', walk: 'Walk_Loop', jog: 'Jog_Fwd_Loop', sprint: 'Sprint_Loop',
   jumpStart: 'Jump_Start', jumpLoop: 'Jump_Loop', jumpLand: 'Jump_Land',
   swimIdle: 'Swim_Idle_Loop', swim: 'Swim_Fwd_Loop', drive: 'Driving_Loop', talk: 'Idle_Talking_Loop',
@@ -49,6 +52,21 @@ const CLIPS: Record<State, string> = {
 };
 /** speed (m/s) at which each locomotion clip looks right at timeScale 1 */
 const REF_SPEED: Partial<Record<State, number>> = { walk: 1.5, jog: 3.6, sprint: 6.2, swim: 1.6 };
+
+/** Random everyday outfit for pedestrians / tourists. */
+export function randomOutfit(r: () => number, kind: 'local' | 'tourist' = 'local'): Outfit {
+  const pick = <T>(a: T[]) => a[Math.floor(r() * a.length)];
+  const female = r() < 0.5;
+  const shirts = kind === 'tourist' ? [0xff6f61, 0x6ec6ff, 0xfff176, 0x81c784, 0xffffff, 0xf48fb1] : [0xf5f5f0, 0x2b2b2b, 0x3b5f8a, 0x9e2b2b, 0x6b7f4a, 0xd8c3a5, 0x7a4fa0, 0xe8e8e8];
+  const pants = kind === 'tourist' ? [0xd8c3a5, 0x8d9a7a, 0x4a6fa5] : [0x2c3e5c, 0x1e1e1e, 0x5a5a5a, 0x7a6a50, 0x3f5f8f];
+  return {
+    body: female ? 'female' : 'male',
+    height: female ? 1.6 + r() * 0.12 : 1.7 + r() * 0.14,
+    shirt: new THREE.Color(pick(shirts)), pants: new THREE.Color(pick(pants)), shoes: new THREE.Color(pick([0xf0f0f0, 0x222222, 0x8a5a3a])),
+    sleeves: female ? pick(['short', 'none'] as const) : pick(['short', 'short', 'rolled'] as const),
+    crop: female && r() < 0.3, shorts: kind === 'tourist' || r() < 0.35, beard: !female && r() < 0.45,
+  };
+}
 
 export class SkinnedCharacter {
   readonly root = new THREE.Group();
@@ -93,7 +111,10 @@ export class SkinnedCharacter {
       if (/Superhero/i.test(mat.name)) {
         const ws = m.getWorldScale(new THREE.Vector3()).y; // world meters per mesh unit
         m.material = this.dressMaterial(mat, o, 1 / ws);
-        this.computeRegions(m, o, 1 / ws);
+        const key = `${o.body}|${o.sleeves}|${o.crop}|${o.shorts}`;
+        const cached = regionGeoCache.get(key);
+        if (cached) m.geometry = cached;
+        else { m.geometry = m.geometry.clone(); this.computeRegions(m, o, 1 / ws); regionGeoCache.set(key, m.geometry); }
       } else {
         m.material = mat.clone();
         if (/Hair/i.test(mat.name)) {
@@ -116,7 +137,7 @@ export class SkinnedCharacter {
       const clip = byName.get(name);
       if (!clip) continue;
       const a = this.mixer.clipAction(clip);
-      if (st === 'jumpStart' || st === 'jumpLand' || st === 'punch' || st === 'hit') { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
+      if (['jumpStart', 'jumpLand', 'punch', 'hit', 'death', 'roll', 'jab', 'interact', 'pickup'].includes(st)) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
       this.actions.set(st, a);
     }
     this.actions.get('idle')?.play();
@@ -258,7 +279,7 @@ export class SkinnedCharacter {
   }
 
   /** Trigger a one-shot action (punch, hit…). */
-  trigger(st: 'punch' | 'hit' | 'jumpLand', dur = 0.6) { this.play(st, 0.1); this.oneShot = dur; }
+  trigger(st: State, dur = 0.6) { this.play(st, 0.1); this.oneShot = dur; }
 
   update(dt: number, speed: number, grounded: boolean, vy: number, swimming = false): void {
     if (!this.mixer) return;

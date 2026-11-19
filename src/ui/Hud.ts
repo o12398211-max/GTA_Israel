@@ -14,6 +14,15 @@ export class Hud {
   currentFps = 0;
 
   show(): void { this.root.hidden = false; }
+  private toastEl: HTMLDivElement | null = null;
+  private toastTimer = 0;
+  /** Short GTA-style message in the top-left. */
+  toast(text: string, seconds = 4) {
+    if (!this.toastEl) { this.toastEl = document.createElement('div'); this.toastEl.id = 'hud-toast'; this.root.appendChild(this.toastEl); }
+    this.toastEl.textContent = text;
+    this.toastEl.classList.add('show');
+    this.toastTimer = seconds;
+  }
   toggleHelp(): void { this.help.classList.toggle('hidden'); }
 
   update(dt: number, time: string, zone: ZoneId, speedUp: boolean): void {
@@ -33,6 +42,7 @@ export class Hud {
       this.banner.classList.add('show');
       this.bannerTimer = 4;
     }
+    if (this.toastTimer > 0) { this.toastTimer -= dt; if (this.toastTimer <= 0) this.toastEl?.classList.remove('show'); }
     if (this.bannerTimer > 0) {
       this.bannerTimer -= dt;
       if (this.bannerTimer <= 0) this.banner.classList.remove('show');

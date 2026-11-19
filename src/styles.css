@@ -90,3 +90,9 @@ html, body {
   #zone-banner { right: 16px; bottom: 110px; }
   #zone-banner .zone-en { font-size: 30px; }
 }
+#hud-toast {
+  position: absolute; top: 70px; right: 18px; max-width: 380px; padding: 12px 16px; border-radius: 8px;
+  background: rgba(8, 4, 16, .78); border-right: 4px solid var(--pink); font-size: 16px; line-height: 1.4;
+  opacity: 0; transform: translateX(20px); transition: opacity .3s, transform .3s;
+}
+#hud-toast.show { opacity: 1; transform: none; }

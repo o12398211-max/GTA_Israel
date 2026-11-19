@@ -20,30 +20,35 @@ export class FollowCamera {
 
   constructor(readonly camera: THREE.PerspectiveCamera, private colliders: ColliderWorld) {}
 
+  setDistance(d: number) { this.targetDistance = d; this.maxDistance = Math.max(14, d * 1.6); }
+  private maxDistance = 14;
+  private vehicleMode = false;
+
   snap(target: THREE.Vector3, yaw: number): void {
     this.yaw = yaw;
     this.focus.copy(target);
     this.computeDesired(this.current);
   }
 
-  update(dt: number, input: InputState, target: THREE.Vector3, playerYaw: number, playerSpeed: number): void {
+  update(dt: number, input: InputState, target: THREE.Vector3, playerYaw: number, playerSpeed: number, vehicle = false): void {
+    this.vehicleMode = vehicle;
     this.yaw -= input.lookX;
     this.pitch = THREE.MathUtils.clamp(this.pitch + input.lookY, -0.5, 1.25);
-    this.targetDistance = THREE.MathUtils.clamp(this.targetDistance + input.zoom * 0.8, 2.2, 14);
+    this.targetDistance = THREE.MathUtils.clamp(this.targetDistance + input.zoom * 0.8, 2.2, this.maxDistance);
     this.distance += (this.targetDistance - this.distance) * (1 - Math.exp(-8 * dt));
 
     // gently swing behind the player when moving and not touching the camera
     const touched = Math.abs(input.lookX) + Math.abs(input.lookY) > 1e-4;
     this.idleLook = touched ? 0 : this.idleLook + dt;
-    if (this.idleLook > 1.2 && playerSpeed > 1.5) {
+    if ((this.idleLook > (this.vehicleMode ? 0.6 : 1.2)) && playerSpeed > 1.5) {
       let d = playerYaw - this.yaw;
       d = Math.atan2(Math.sin(d), Math.cos(d));
-      this.yaw += d * (1 - Math.exp(-1.2 * dt)) * Math.min(1, playerSpeed / 6);
+      this.yaw += d * (1 - Math.exp(-(this.vehicleMode ? 3.5 : 1.2) * dt)) * Math.min(1, playerSpeed / 6);
       this.pitch += (0.22 - this.pitch) * (1 - Math.exp(-0.8 * dt));
     }
 
     // focus point: chest height, smoothed (slightly more lag vertically)
-    const f = new THREE.Vector3(target.x, target.y + 1.55, target.z);
+    const f = new THREE.Vector3(target.x, target.y + (this.vehicleMode ? 1.8 : 1.55), target.z);
     const kh = 1 - Math.exp(-18 * dt), kv = 1 - Math.exp(-9 * dt);
     this.focus.x += (f.x - this.focus.x) * kh;
     this.focus.z += (f.z - this.focus.z) * kh;
