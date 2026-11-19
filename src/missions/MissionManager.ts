@@ -179,7 +179,22 @@ export class MissionManager implements GameSystem {
 }
 
 /** Common step builders. */
+/** Anything with the mini-game lifecycle. */
+export interface MiniGameLike { start(): void | Promise<void>; update(dt: number): 'running' | 'won' | 'lost'; dispose(): void; targetPos?: { x: number; z: number; r?: number } }
+
 export const S = {
+  /** Run a mini-game as a mission step (won = continue, lost = fail). */
+  mg(make: (c: MissionCtx) => MiniGameLike, objective: string, failText = '', target?: (mg: MiniGameLike) => { x: number; z: number; r?: number } | null): Step {
+    let mg: MiniGameLike | null = null;
+    let started = false;
+    return {
+      objective, failText, marker: true,
+      target: () => (mg && started && target ? target(mg) : null),
+      enter: async (c) => { mg = make(c); started = false; await mg.start(); started = true; },
+      update: (c) => { if (!mg || !started) return false; const r = mg.update(c.dt); return r === 'won' ? true : r === 'lost' ? 'fail' : false; },
+      exit: () => { mg?.dispose(); mg = null; },
+    };
+  },
   goto(x: number, z: number, objective: string, r = 4, opts: Partial<Step> = {}): Step {
     return { objective, target: { x, z, r }, ...opts };
   },

@@ -283,6 +283,14 @@ export class Traffic {
     return !!best;
   }
 
+  /** Push traffic cars away from a spot (spawning the player's car in a lane). */
+  clearAround(at: THREE.Vector3, r: number) {
+    for (const c of this.cars) {
+      const x = c.lane.a.x + c.lane.dir.x * c.s, z = c.lane.a.y + c.lane.dir.y * c.s;
+      if (Math.hypot(x - at.x, z - at.z) < r) { c.s = (c.s + r * 2) % c.lane.len; c.v = 0; }
+    }
+    for (const l of this.lanes) l.cars.sort((a, b) => a.s - b.s);
+  }
   /** Nearest lane point + heading (for mini-games / spawning). */
   get carCount() { return this.cars.length; }
 }

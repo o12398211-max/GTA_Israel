@@ -180,3 +180,53 @@ html, body {
 #phone-alert .a-app { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
 #phone-alert .a-text { font-size: 15px; }
 @media (max-width: 700px) { #phone { right: 50%; transform: translateX(50%) scale(.85); transform-origin: bottom center; } }
+
+/* ---------- mini-games ---------- */
+.mg-overlay { position: absolute; pointer-events: none; text-shadow: 2px 2px 0 #000; }
+.mg-overlay h2, .mg-overlay .title { font-family: var(--font-gta); font-size: 34px; margin: 0 0 6px; color: #ffcf40; }
+.mg-overlay.matkot { top: 90px; left: 30px; background: rgba(0,0,0,.45); padding: 14px 18px; border-radius: 12px; width: 280px; }
+.mg-overlay .row { display: flex; gap: 8px; font-size: 18px; }
+.mg-overlay .row b { color: #7be06f; }
+.mg-overlay .timing { position: relative; height: 14px; margin: 10px 0; background: rgba(255,255,255,.15); border-radius: 7px; overflow: hidden; }
+.mg-overlay .timing .zone { position: absolute; top: 0; bottom: 0; background: rgba(123,224,111,.6); }
+.mg-overlay .timing .cursor { position: absolute; top: -2px; width: 4px; height: 18px; background: #fff; }
+.mg-overlay p { font-size: 13px; margin: 4px 0 0; opacity: .85; }
+.mg-overlay.shelter { top: 18%; left: 50%; transform: translateX(-50%); text-align: center; background: rgba(15, 25, 20, .7); border: 2px solid #4caf50; border-radius: 14px; padding: 14px 26px; }
+.mg-overlay.shelter .title { color: #fff; font-family: var(--font-he); font-size: 24px; }
+.mg-overlay.shelter .clock { font-family: var(--font-gta); font-size: 56px; color: #9dffb5; }
+.mg-overlay.shelter .clock.low { color: #ffcf40; }
+.mg-overlay.shelter .hint { font-size: 16px; }
+.mg-overlay.jam { top: 90px; left: 30px; width: 300px; background: rgba(0,0,0,.5); border-radius: 12px; padding: 12px 16px; }
+.mg-overlay.jam .meter { height: 16px; background: rgba(255,255,255,.15); border-radius: 8px; overflow: hidden; margin: 4px 0 8px; }
+.mg-overlay.jam .fill { height: 100%; width: 100%; transition: width .2s, background .4s; }
+.mg-overlay.jam .rant { font-size: 15px; color: #ffd6a0; min-height: 1.3em; }
+.mg-overlay.brawl { top: 90px; left: 30px; background: rgba(0,0,0,.45); border-radius: 12px; padding: 12px 16px; }
+.mg-overlay.brawl .title { color: #ff5a5a; }
+.mg-overlay.brawl .obj { font-size: 18px; } .mg-overlay.brawl .ko { font-size: 14px; color: #ffe14d; }
+.brawl-shout { position: absolute; top: 30%; left: 50%; transform: translate(-50%, 0) rotate(-3deg); font-family: var(--font-gta); font-size: 40px; color: #fff;
+  text-shadow: 3px 3px 0 #c2185b, 0 0 12px #000; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.brawl-shout.show { opacity: 1; }
+.comic-pop { position: absolute; transform: translate(-50%, -50%); font-family: var(--font-gta); font-size: 34px; font-weight: 900; pointer-events: none;
+  -webkit-text-stroke: 2px #000; text-shadow: 3px 3px 0 #000; white-space: nowrap; }
+.mg-overlay.rhythm { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 30px; }
+.mg-overlay.rhythm .title { color: #ff4fa3; font-size: 44px; }
+.mg-overlay.rhythm .score { font-family: var(--font-gta); font-size: 30px; }
+.mg-overlay.rhythm .lanes { display: flex; gap: 10px; height: 58vh; margin-top: 14px; direction: ltr; }
+.mg-overlay.rhythm .score { direction: ltr; }
+.mg-overlay.rhythm .lane { position: relative; width: 70px; height: 100%; background: linear-gradient(rgba(0,0,0,.1), rgba(0,0,0,.55)); border-radius: 10px; overflow: hidden; border: 2px solid rgba(255,255,255,.2); }
+.mg-overlay.rhythm .lane.good { animation: lgood .25s; } .mg-overlay.rhythm .lane.bad { animation: lbad .25s; }
+@keyframes lgood { from { background: rgba(123,224,111,.7); } } @keyframes lbad { from { background: rgba(255,80,80,.6); } }
+.mg-overlay.rhythm .hitline { position: absolute; left: 0; right: 0; top: 86%; height: 4px; background: #fff; box-shadow: 0 0 10px #fff; }
+.mg-overlay.rhythm .key { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 22px; }
+.mg-overlay.rhythm .note { position: absolute; left: 8px; right: 8px; height: 22px; border-radius: 11px; margin-top: -11px; box-shadow: 0 0 12px currentColor; }
+.note.n0 { background: #ff4fa3; color: #ff4fa3; } .note.n1 { background: #7be06f; color: #7be06f; } .note.n2 { background: #4dd2ff; color: #4dd2ff; } .note.n3 { background: #ffcf40; color: #ffcf40; }
+.mg-overlay.rhythm .hint { margin-top: 10px; font-size: 15px; }
+.shop-menu { position: fixed; z-index: 9; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(460px, 92vw); max-height: 80vh; overflow: auto;
+  background: rgba(14, 8, 26, .94); border: 2px solid var(--pink); border-radius: 16px; padding: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.shop-menu h2 { margin: 0 0 4px; } .shop-menu .cash { color: #7be06f; margin: 0 0 10px; }
+.shop-menu .items { display: flex; flex-direction: column; gap: 8px; }
+.shop-menu button { display: flex; align-items: center; gap: 10px; border: 0; border-radius: 10px; padding: 10px 12px; background: rgba(255,255,255,.08); color: #fff; font: 16px var(--font-he); cursor: pointer; }
+.shop-menu button:hover { background: rgba(255,79,163,.3); }
+.shop-menu button i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; }
+.shop-menu button span { flex: 1; text-align: right; } .shop-menu button b { color: #ffcf40; }
+.shop-menu .close { margin-top: 12px; justify-content: center; background: rgba(255,255,255,.15); }

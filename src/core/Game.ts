@@ -29,7 +29,7 @@ export const SPAWNS: Record<string, { x: number; z: number; yaw: number }> = {
   ayalon: { x: 77, z: 20, yaw: 0 },
   route1: { x: 300, z: 6, yaw: Math.PI / 2 },
   jerusalem: { x: 535, z: 0, yaw: Math.PI / 2 },
-  stadium: { x: 175, z: -300, yaw: 0 },
+  stadium: { x: -60, z: -316, yaw: Math.PI },
   airfield: { x: -234.5, z: -332, yaw: 0 },
 };
 

@@ -60,6 +60,12 @@ export class Physics {
     this.world.createCollider(RAPIER.ColliderDesc.trimesh(v, idx).setCollisionGroups(groups(GROUP.STATIC, 0xffff)).setFriction(1.0), body);
   }
 
+  /** Add a static box after creation (structures built by mini-games). */
+  addStaticBox(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number) {
+    const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+    this.world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setTranslation(cx, cy, cz).setCollisionGroups(groups(GROUP.STATIC, 0xffff)), body);
+  }
+
   /** Fixed-step update with interpolation-free catch-up (max 4 steps/frame). */
   update(dt: number) {
     this.accumulator = Math.min(this.accumulator + dt, this.step * 4);
