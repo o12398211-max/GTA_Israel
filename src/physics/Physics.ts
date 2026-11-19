@@ -66,9 +66,9 @@ export class Physics {
     this.world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setTranslation(cx, cy, cz).setCollisionGroups(groups(GROUP.STATIC, 0xffff)), body);
   }
 
-  /** Fixed-step update with interpolation-free catch-up (max 4 steps/frame). */
+  /** Fixed-step update (max 2 steps/frame – if we fall behind, slow down instead of spiralling). */
   update(dt: number) {
-    this.accumulator = Math.min(this.accumulator + dt, this.step * 4);
+    this.accumulator = Math.min(this.accumulator + dt, this.step * 2);
     while (this.accumulator >= this.step) {
       for (const f of this.onStep) f(this.step);
       this.world.step();

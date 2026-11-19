@@ -31,6 +31,7 @@ export class DayNight {
   private envSky = new Sky();
   private envRT: THREE.WebGLRenderTarget | null = null;
   private envTimer = 999;
+  private envHour = -10;
   private stars: THREE.Points;
   readonly clouds = new Clouds();
 
@@ -133,8 +134,9 @@ export class DayNight {
     this.golden = golden;
 
     // refresh environment map every few seconds (or quickly when time is sped up)
-    this.envTimer += dt * Math.max(1, this.speed / 6);
-    if (this.envTimer > 4) {
+    this.envTimer += dt;
+    if (this.envTimer > 45 || Math.abs(this.hour - this.envHour) > 0.35 && this.envTimer > 3) {
+      this.envHour = this.hour;
       this.envTimer = 0;
       const eu = this.envSky.material.uniforms;
       for (const k of ['sunPosition', 'turbidity', 'rayleigh', 'mieCoefficient', 'mieDirectionalG'] as const) {

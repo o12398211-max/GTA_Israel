@@ -31,21 +31,21 @@ export class Clouds {
         float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float n(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.-2.*f);
           return mix(mix(h(i), h(i+vec2(1,0)), u.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), u.x), u.y); }
-        float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 6; i++) { s += a * n(p); p = p * 2.03 + 11.7; a *= 0.5; } return s; }
+        float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * n(p); p = p * 2.03 + 11.7; a *= 0.5; } return s; }
         void main() {
           vec3 d = normalize(vDir);
           if (d.y < 0.0) discard;
           // project onto a cloud plane
           vec2 uv = d.xz / (d.y + 0.12) * 1.6 + vec2(uTime * 0.004, uTime * 0.0015);
-          vec2 warp = vec2(fbm(uv * 0.7), fbm(uv * 0.7 + 5.2));
+          float wv = fbm(uv * 0.7); vec2 warp = vec2(wv, n(uv * 1.3 + 5.2));
           float dens = fbm(uv + warp * 0.8);
           float c = smoothstep(uCover, uCover + 0.25, dens);
           // streaky cirrus on top
-          float cirrus = smoothstep(0.55, 0.85, fbm(vec2(uv.x * 0.4, uv.y * 2.0) + 3.0)) * 0.35;
+          float cirrus = smoothstep(0.55, 0.85, n(vec2(uv.x * 0.8, uv.y * 4.0) + 3.0) * 0.6 + wv * 0.4) * 0.35;
           c = max(c, cirrus);
           // self-shadow: sample toward sun
           vec2 sunUv = uSunDir.xz / (abs(uSunDir.y) + 0.12) * 0.04;
-          float dens2 = fbm(uv + warp * 0.8 + sunUv);
+          float dens2 = dens + (n((uv + sunUv) * 4.0) - n(uv * 4.0)) * 0.25;
           float shade = clamp(1.0 - (dens2 - dens) * 4.0, 0.25, 1.2);
           float sunAmt = max(dot(d, normalize(uSunDir)), 0.0);
           vec3 lit = uSunColor * (0.75 + 0.6 * pow(sunAmt, 6.0)) * shade;

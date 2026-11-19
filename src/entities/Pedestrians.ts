@@ -16,7 +16,7 @@ interface Path { pts: THREE.Vector2[]; loop: boolean; y: number | null; zone: 'c
 interface Ped {
   ch: SkinnedCharacter; kind: PedKind; path: Path; seg: number; t: number; speed: number; dirSign: 1 | -1;
   state: 'walk' | 'idle' | 'flee' | 'knocked' | 'chase' | 'getup'; timer: number;
-  pos: THREE.Vector3; vel: THREE.Vector3; yaw: number; dazed: number;
+  pos: THREE.Vector3; vel: THREE.Vector3; yaw: number; dazed: number; lod: number;
 }
 
 export interface PedEvents { hitByCar: number; caught: boolean; punched: number }
@@ -40,7 +40,7 @@ export class Pedestrians {
       jobs.push((async () => {
         const outfit = kind === 'police' ? OUTFITS.police : randomOutfit(p.rnd.next, kind === 'tourist' ? 'tourist' : 'local');
         const ch = await SkinnedCharacter.create(outfit);
-        const ped: Ped = { ch, kind, path: p.paths[0], seg: 0, t: 0, speed: 1.3, dirSign: 1, state: 'walk', timer: 0, pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, dazed: 0 };
+        const ped: Ped = { ch, kind, path: p.paths[0], seg: 0, t: 0, speed: 1.3, dirSign: 1, state: 'walk', timer: 0, pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, dazed: 0, lod: 0 };
         p.peds.push(ped);
         p.group.add(ch.root);
         const star = p.makeDizzyStars();
@@ -220,7 +220,10 @@ export class Pedestrians {
       p.ch.root.position.copy(p.pos);
       p.ch.root.rotation.y = p.yaw;
       // animation LOD: skip far mixers on alternate frames
-      if (dist < 70) p.ch.update(dt, moving, true, 0);
+      // animation LOD: full rate up close, half rate further away, frozen beyond 55 m
+      p.lod = (p.lod + 1) % 2;
+      if (dist < 25) p.ch.update(dt, moving, true, 0);
+      else if (dist < 55 && p.lod === 0) p.ch.update(dt * 2, moving, true, 0);
       p.ch.root.visible = dist < 110;
     }
   }

@@ -71,19 +71,19 @@ export class CityBuilder {
     slabs: new Instancer(this.box, this.mats.slabs, { name: 'slab-paving' }),
     road: new Instancer(this.box, this.mats.asphalt, { name: 'roads' }),
     paint: new Instancer(this.box, this.mats.paint, { name: 'markings' }),
-    balcony: new Instancer(this.box, this.mats.plaster, { castShadow: true, name: 'balconies' }),
-    railing: new Instancer(this.box, this.mats.metal, { castShadow: true, name: 'railings' }),
-    ac: new Instancer(P.acUnitGeometry(), this.mats.ac, { castShadow: true, name: 'ac-units' }),
+    balcony: new Instancer(this.box, this.mats.plaster, { castShadow: false, name: 'balconies' }),
+    railing: new Instancer(this.box, this.mats.metal, { castShadow: false, name: 'railings' }),
+    ac: new Instancer(P.acUnitGeometry(), this.mats.ac, { castShadow: false, name: 'ac-units' }),
     dome: new Instancer(new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), this.mats.stoneWall, { castShadow: true, name: 'domes' }),
-    umbrella: new Instancer(P.umbrellaGeometry(), this.mats.vcol, { castShadow: true, name: 'umbrellas' }),
-    lounger: new Instancer(P.loungerGeometry(), this.mats.vcol, { castShadow: true, name: 'loungers' }),
-    lampPole: new Instancer(P.lampPoleGeometry(), this.mats.metal, { castShadow: true, name: 'lamp-poles' }),
+    umbrella: new Instancer(P.umbrellaGeometry(), this.mats.vcol, { castShadow: false, name: 'umbrellas' }),
+    lounger: new Instancer(P.loungerGeometry(), this.mats.vcol, { castShadow: false, name: 'loungers' }),
+    lampPole: new Instancer(P.lampPoleGeometry(), this.mats.metal, { castShadow: false, name: 'lamp-poles' }),
     lampHead: new Instancer(P.lampHeadGeometry(), this.mats.glow, { name: 'lamp-heads' }),
-    solar: new Instancer(P.solarHeaterGeometry(), this.mats.vcol, { castShadow: true, name: 'solar-heaters' }),
-    stall: new Instancer(P.stallGeometry(), this.mats.vcol, { castShadow: true, name: 'stalls' }),
-    awning: new Instancer(P.awningGeometry(), this.mats.vcol, { castShadow: true, name: 'awnings' }),
+    solar: new Instancer(P.solarHeaterGeometry(), this.mats.vcol, { castShadow: false, name: 'solar-heaters' }),
+    stall: new Instancer(P.stallGeometry(), this.mats.vcol, { castShadow: false, name: 'stalls' }),
+    awning: new Instancer(P.awningGeometry(), this.mats.vcol, { castShadow: false, name: 'awnings' }),
     lifeguard: new Instancer(P.lifeguardTowerGeometry(), this.mats.vcol, { castShadow: true, name: 'lifeguard' }),
-    bench: new Instancer(P.benchGeometry(), this.mats.vcol, { castShadow: true, name: 'benches' }),
+    bench: new Instancer(P.benchGeometry(), this.mats.vcol, { castShadow: false, name: 'benches' }),
     bulb: new Instancer(new THREE.SphereGeometry(0.05, 6, 4), this.mats.bulbs, { name: 'string-lights' }),
     pool: new Instancer(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), this.poolMaterial(), { name: 'light-pools', receiveShadow: false }),
   };
@@ -119,7 +119,7 @@ export class CityBuilder {
       if (/bulb|glass/i.test(m.name)) {
         m.emissive = new THREE.Color(0xffc27a);
         m.emissiveIntensity = 0;
-        this.nightMaterials.push({ mat: m, max: /bulb/i.test(m.name) ? 30 : 4 });
+        this.nightMaterials.push({ mat: m, max: /bulb/i.test(m.name) ? 30 : 3 });
       }
     }
   }
@@ -396,7 +396,7 @@ export class CityBuilder {
       const y = terrainHeight(x, z);
       this.I.umbrella.add(x, y, z, 1, 1, 1, rnd.range(0, 6.28), rnd.pick(umbrellaColors), rnd.range(-0.08, 0.08), rnd.range(-0.08, 0.08));
       if (rnd.chance(0.7)) this.I.lounger.add(x + rnd.range(-1.2, 1.2), y, z + rnd.range(-1.2, 1.2), 1, 1, 1, rnd.range(-0.4, 0.4) + Math.PI / 2, rnd.pick([0xffffff, 0x2fb5e0, 0xf07aa8]));
-      if (rnd.chance(0.35)) this.M.chair.add(x + rnd.range(-2, 2), y, z + rnd.range(-2, 2), rnd.range(0, 6.28));
+      if (rnd.chance(0.12)) this.M.chair.add(x + rnd.range(-2, 2), y, z + rnd.range(-2, 2), rnd.range(0, 6.28));
     }
     for (const z of [-260, -90, 80, 250]) {
       const x = -275, y = terrainHeight(x, z);

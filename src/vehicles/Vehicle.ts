@@ -99,8 +99,16 @@ export class Vehicle {
 
   /** Called every fixed physics step. */
   fixedUpdate(dt: number, inp: DriveInput | null) {
-    if (this.isPlane) { this.updatePlane(dt, inp); return; }
+    if (this.isPlane) { if (this.occupied || this.flight.airborne || this.flight.vel.lengthSq() > 0.01) this.updatePlane(dt, inp); return; }
     const b = this.body!, c = this.ctrl!, k = this.kit;
+    // parked and at rest: let Rapier keep it asleep, skip the ray-cast vehicle update
+    if (!this.occupied && b.isSleeping()) { this.speed = 0; this.skid = 0; return; }
+    if (this.occupied && b.isSleeping()) b.wakeUp();
+    if (!this.occupied) {
+      const lv = b.linvel();
+      this.restT = Math.hypot(lv.x, lv.y, lv.z) < 0.08 ? this.restT + dt : 0;
+      if (this.restT > 1.5) { b.sleep(); return; }
+    }
     const lin = b.linvel();
     const rot = b.rotation();
     _q.set(rot.x, rot.y, rot.z, rot.w);
@@ -159,6 +167,7 @@ export class Vehicle {
     if (p.y < -30 || p.x < WORLD.minX || p.x > WORLD.maxX || p.z < WORLD.minZ || p.z > WORLD.maxZ) this.resetUpright(true);
   }
   private flipTimer = 0;
+  private restT = 0;
 
   resetUpright(moveToRoad = false) {
     const b = this.body!;

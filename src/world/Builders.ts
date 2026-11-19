@@ -54,7 +54,9 @@ const _e = new THREE.Euler();
 const _p = new THREE.Vector3();
 const _s = new THREE.Vector3();
 
-/** Collects instances and builds one InstancedMesh (one draw call). */
+const CHUNK = 280;
+
+/** Collects instances and builds chunked InstancedMeshes. */
 export class Instancer {
   private matrices: number[] = [];
   private colors: number[] = [];
@@ -79,18 +81,41 @@ export class Instancer {
     return this;
   }
 
-  build(): THREE.InstancedMesh {
+  /**
+   * Build one InstancedMesh per spatial chunk (CHUNK m grid by instance
+   * position) so three.js can frustum-cull chunks in the main AND shadow pass –
+   * the GPU only draws the parts of the city that are actually visible.
+   */
+  build(): THREE.Object3D {
     const n = this.count;
-    const mesh = new THREE.InstancedMesh(this.geometry, this.material, Math.max(1, n));
-    mesh.count = n;
-    mesh.instanceMatrix.array.set(this.matrices);
-    if (this.hasColor) mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(this.colors), 3);
-    mesh.castShadow = !!this.opts.castShadow;
-    mesh.receiveShadow = this.opts.receiveShadow ?? true;
-    mesh.name = this.opts.name ?? 'instances';
-    mesh.computeBoundingSphere();
-    mesh.computeBoundingBox();
-    return mesh;
+    const buckets = new Map<string, number[]>();
+    for (let i = 0; i < n; i++) {
+      const x = this.matrices[i * 16 + 12], z = this.matrices[i * 16 + 14];
+      const k = `${Math.floor(x / CHUNK)},${Math.floor(z / CHUNK)}`;
+      let b = buckets.get(k);
+      if (!b) buckets.set(k, (b = []));
+      b.push(i);
+    }
+    const group = new THREE.Group();
+    group.name = this.opts.name ?? 'instances';
+    for (const idx of buckets.values()) {
+      const mesh = new THREE.InstancedMesh(this.geometry, this.material, idx.length);
+      idx.forEach((src, j) => {
+        mesh.instanceMatrix.array.set(this.matrices.slice(src * 16, src * 16 + 16), j * 16);
+      });
+      if (this.hasColor) {
+        const col = new Float32Array(idx.length * 3);
+        idx.forEach((src, j) => col.set(this.colors.slice(src * 3, src * 3 + 3), j * 3));
+        mesh.instanceColor = new THREE.InstancedBufferAttribute(col, 3);
+      }
+      mesh.castShadow = !!this.opts.castShadow;
+      mesh.receiveShadow = this.opts.receiveShadow ?? true;
+      mesh.name = group.name;
+      mesh.computeBoundingSphere();
+      mesh.computeBoundingBox();
+      group.add(mesh);
+    }
+    return group;
   }
 }
 
@@ -105,5 +130,5 @@ export class MultiInstancer {
     for (const p of this.parts) p.add(x, y, z, sx, sy, sz, rotY, color);
     return this;
   }
-  build(): THREE.InstancedMesh[] { return this.parts.map((p) => p.build()); }
+  build(): THREE.Object3D[] { return this.parts.map((p) => p.build()); }
 }

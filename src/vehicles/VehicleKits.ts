@@ -57,9 +57,9 @@ export function partMaterial(k: PartKey): THREE.Material {
   return cache.get(k)!;
 }
 
-const rbox = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => new RoundedBoxGeometry(w, h, d, 3, r).translate(x, y, z);
+const rbox = (w: number, h: number, d: number, r: number, x = 0, y = 0, z = 0) => new RoundedBoxGeometry(w, h, d, 2, r).translate(x, y, z);
 const box = (w: number, h: number, d: number, x = 0, y = 0, z = 0) => new THREE.BoxGeometry(w, h, d).translate(x, y, z);
-const cyl = (r: number, h: number, x = 0, y = 0, z = 0, axis: 'x' | 'y' | 'z' = 'y', seg = 16) => {
+const cyl = (r: number, h: number, x = 0, y = 0, z = 0, axis: 'x' | 'y' | 'z' = 'y', seg = 10) => {
   const g = new THREE.CylinderGeometry(r, r, h, seg);
   if (axis === 'x') g.rotateZ(Math.PI / 2); else if (axis === 'z') g.rotateX(Math.PI / 2);
   return g.translate(x, y, z);
@@ -92,8 +92,8 @@ function colorize(g: THREE.BufferGeometry, c: THREE.ColorRepresentation) {
 
 function wheelGeo(r: number, w: number) {
   return {
-    tire: cyl(r, w, 0, 0, 0, 'x', 20),
-    rim: mergeAll([cyl(r * 0.62, w + 0.02, 0, 0, 0, 'x', 14), ...[0, 1, 2, 3, 4].map((i) => box(w + 0.03, r * 0.95, 0.06).rotateX((i / 5) * Math.PI))]),
+    tire: cyl(r, w, 0, 0, 0, 'x', 12),
+    rim: mergeAll([cyl(r * 0.62, w + 0.02, 0, 0, 0, 'x', 8), ...[0, 1, 2].map((i) => box(w + 0.03, r * 0.95, 0.06).rotateX((i / 3) * Math.PI))]),
   };
 }
 
@@ -125,7 +125,7 @@ function carKit(type: 'sedan' | 'hatch' | 'taxi' | 'police'): VehicleKit {
     metal.push(box(0.03, 0.03, 0.16, s * (W / 2 + 0.005), 0.92, 0.15), box(0.03, 0.03, 0.16, s * (W / 2 + 0.005), 0.92, -0.85));
     trim.push(box(0.01, 0.55, 0.012, s * (W / 2 + 0.002), 0.7, -0.45));
     // wheel arches
-    for (const z of [L / 2 - 0.85, -L / 2 + 0.8]) trim.push(taper(cyl(wheelR + 0.08, 0.12, s * (W / 2 - 0.04), 0.33, z, 'x', 16), 0.33, 1, 1));
+    for (const z of [L / 2 - 0.85, -L / 2 + 0.8]) trim.push(cyl(wheelR + 0.08, 0.12, s * (W / 2 - 0.04), 0.33, z, 'x', 10));
   }
   plate.push(box(0.52, 0.12, 0.01, 0, 0.48, L / 2 + 0.19), box(0.52, 0.12, 0.01, 0, 0.5, -L / 2 - 0.19).rotateY(Math.PI));
   if (type === 'taxi') {
@@ -242,6 +242,17 @@ function planeKit(): VehicleKit {
     size: new THREE.Vector3(0.7, 0.7, 3.3), mass: 800, seat: new THREE.Vector3(0, 1.4, 0.8), twoWheeler: false,
     engine: 0, maxSpeed: 70, steer: 0.5, grip: 1,
   };
+}
+
+/** Far-LOD car: a handful of boxes (body tinted by instance color, dark cabin, wheels). */
+export function lowPolyGeometry(kit: VehicleKit): THREE.BufferGeometry {
+  const { x: hx, y: hy, z: hz } = kit.size;
+  const parts = [
+    colorize(box(hx * 2, hy * 1.3, hz * 2, 0, hy * 0.65 + 0.25, 0), 0xffffff),
+    colorize(box(hx * 1.7, hy * 1.1, hz * 1.05, 0, hy * 1.3 + 0.25 + hy * 0.5, -hz * 0.08), 0x1a1d22),
+  ];
+  for (const w of kit.wheels) parts.push(colorize(box(w.width, w.r * 2, w.r * 2, w.x, w.r, w.z), 0x151515));
+  return mergeAll(parts);
 }
 
 const kits = new Map<VehicleType, VehicleKit>();

@@ -109,9 +109,9 @@ export class FxSystem implements GameSystem {
 
     // shadow map throttling: refresh when the player moved, plus a steady cadence
     const q = g.quality;
-    const moved = this.lastShadowPos.distanceToSquared(p) > 1;
+    const jumped = this.lastShadowPos.distanceToSquared(p) > 25;
     const cadence = q === 'high' ? 1 : q === 'medium' ? 2 : 3;
-    if (moved || this.frame % cadence === 0) { g.renderer.shadowMap.needsUpdate = true; this.lastShadowPos.copy(p); }
+    if (jumped || this.frame % cadence === 0) { g.renderer.shadowMap.needsUpdate = true; this.lastShadowPos.copy(p); }
     g.traffic.viewer.copy(g.camera.position);
   }
 }

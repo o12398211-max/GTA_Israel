@@ -65,7 +65,7 @@ export class ModelInstancer {
       const im = new THREE.InstancedMesh(p.geometry, p.material, Math.max(1, this.matrices.length));
       im.count = this.matrices.length;
       this.matrices.forEach((m, i) => im.setMatrixAt(i, m));
-      im.castShadow = this.opts.castShadow ?? true;
+      im.castShadow = this.opts.castShadow ?? false;
       im.receiveShadow = true;
       im.computeBoundingSphere();
       group.add(im);

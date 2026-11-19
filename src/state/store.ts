@@ -39,11 +39,11 @@ export interface GameState {
   notify: (app: string, title: string, text: string) => void;
 }
 
-const SETTINGS_KEY = 'gta-israel-settings';
+const SETTINGS_KEY = 'gta-israel-settings-v2';
 const SAVE_KEY = 'gta-israel-save';
 
 function loadSettings(): Settings {
-  const def: Settings = { quality: 'high', mouseSensitivity: 1, invertY: false, master: 0.8, sfx: 1, music: 0.7, language: 'he', subtitles: true, tts: false };
+  const def: Settings = { quality: 'medium', mouseSensitivity: 1, invertY: false, master: 0.8, sfx: 1, music: 0.7, language: 'he', subtitles: true, tts: false };
   try { return { ...def, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') }; } catch { return def; }
 }
 function loadSave(): { missionIndex: number; shekels: number } {

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RAPIER, GROUP, groups, type Physics } from '../physics/Physics';
-import { getKit, partMaterial, PAINTS, type VehicleType, type VehicleKit } from './VehicleKits';
+import { getKit, partMaterial, PAINTS, lowPolyGeometry, type VehicleType, type VehicleKit } from './VehicleKits';
 import { CITY } from '../world/City';
 import { terrainHeight } from '../world/Terrain';
 import { mulberry32 } from '../world/Builders';
@@ -20,7 +20,7 @@ interface Lane {
 }
 interface Car {
   lane: Lane; s: number; v: number; type: VehicleType; kit: VehicleKit; paint: THREE.Color;
-  body: RAPIER.RigidBody; slot: number; bumped: number; honk: number; len: number;
+  body: RAPIER.RigidBody; slot: number; bumped: number; honk: number; len: number; parked: boolean;
 }
 
 export interface TrafficObstacle { pos: THREE.Vector3; radius: number }
@@ -31,7 +31,7 @@ export class Traffic {
   readonly group = new THREE.Group();
   private lanes: Lane[] = [];
   private cars: Car[] = [];
-  private meshes = new Map<VehicleType, { parts: THREE.InstancedMesh[]; wheels: THREE.InstancedMesh[]; count: number }>();
+  private meshes = new Map<VehicleType, { parts: THREE.InstancedMesh[]; wheels: THREE.InstancedMesh[]; far: THREE.InstancedMesh; count: number }>();
   private time = 0;
   private lightHeads!: THREE.InstancedMesh;
   private lightData: { x: number; z: number; axis: 'NS' | 'EW' }[] = [];
@@ -40,7 +40,8 @@ export class Traffic {
   /** how jammed the Ayalon is right now (0..1), for the patience mini-game */
   jamLevel = 0;
 
-  constructor(private physics: Physics) {
+  private farMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.3 });
+  constructor(private physics: Physics, private density = 1) {
     this.buildLanes();
     this.spawnCars();
     this.buildMeshes();
@@ -89,7 +90,7 @@ export class Traffic {
       return 'sedan';
     };
     for (const lane of this.lanes) {
-      const density = lane.jam ? 1 / 17 : lane.route1 ? 1 / 55 : 1 / 75;
+      const density = (lane.jam ? 1 / 17 : lane.route1 ? 1 / 55 : 1 / 75) * this.density;
       const n = Math.max(1, Math.floor(lane.len * density));
       for (let i = 0; i < n; i++) {
         const type = pickType(lane);
@@ -98,7 +99,7 @@ export class Traffic {
         const body = this.physics.world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
         this.physics.world.createCollider(RAPIER.ColliderDesc.cuboid(kit.size.x, kit.size.y * 1.2, kit.size.z).setTranslation(0, kit.size.y * 1.4, 0)
           .setCollisionGroups(groups(GROUP.TRAFFIC, GROUP.VEHICLE | GROUP.PROP)), body);
-        const car: Car = { lane, s, v: lane.v0 * 0.5, type, kit, paint: new THREE.Color(type === 'taxi' ? 0xf4f1e6 : type === 'police' ? 0xf5f6f8 : rnd.pick(PAINTS)), body, slot: 0, bumped: 0, honk: rnd.range(3, 20), len: kit.size.z * 2 };
+        const car: Car = { lane, s, v: lane.v0 * 0.5, type, kit, paint: new THREE.Color(type === 'taxi' ? 0xf4f1e6 : type === 'police' ? 0xf5f6f8 : rnd.pick(PAINTS)), body, slot: 0, bumped: 0, honk: rnd.range(3, 20), len: kit.size.z * 2, parked: false };
         lane.cars.push(car);
         this.cars.push(car);
       }
@@ -116,7 +117,7 @@ export class Traffic {
         im.castShadow = p.key === 'paint' || p.key === 'glass';
         im.receiveShadow = true;
         im.frustumCulled = false;
-        if (p.key === 'paint') cars.forEach((c, i) => im.setColorAt(i, c.paint));
+        if (p.key === 'paint') { cars.forEach((c, i) => im.setColorAt(i, c.paint)); im.userData.paint = true; }
         this.group.add(im);
         return im;
       });
@@ -128,7 +129,11 @@ export class Traffic {
         wheels.push(im);
       }
       cars.forEach((c, i) => (c.slot = i));
-      this.meshes.set(type, { parts, wheels, count: cars.length });
+      const far = new THREE.InstancedMesh(lowPolyGeometry(kit), this.farMat, cars.length);
+      far.frustumCulled = false; far.castShadow = false; far.receiveShadow = true;
+      cars.forEach((c, i) => far.setColorAt(i, c.paint));
+      this.group.add(far);
+      this.meshes.set(type, { parts, wheels, far, count: cars.length });
     }
   }
 
@@ -237,16 +242,23 @@ export class Traffic {
   private _q = new THREE.Quaternion();
   private _p = new THREE.Vector3();
   private _s = new THREE.Vector3(1, 1, 1);
-  private _zero = new THREE.Vector3(0, 0, 0);
   private _wm = new THREE.Matrix4();
   private _full = new THREE.Matrix4();
   /** camera position for distance culling (cars beyond 420 m are collapsed) */
   viewer = new THREE.Vector3();
+  private _euler = new THREE.Euler(0, 0, 0, 'YXZ');
+  /** full-detail models only up close, boxes beyond */
+  lodDistance = 85;
   private writeTransforms() {
-    const up = new THREE.Vector3(0, 1, 0);
+    // compact visible cars into the first slots of each InstancedMesh and set
+    // .count – the GPU only processes cars within draw range
+    const used = new Map<VehicleType, number>();
+    const usedFar = new Map<VehicleType, number>();
+    for (const k of this.meshes.keys()) { used.set(k, 0); usedFar.set(k, 0); }
     for (const car of this.cars) {
       const l = car.lane;
       const x = l.a.x + l.dir.x * car.s, z = l.a.y + l.dir.y * car.s;
+      const d = Math.hypot(x - this.viewer.x, z - this.viewer.z);
       let y = 0.03;
       let pitch = 0;
       if (l.route1) {
@@ -255,25 +267,45 @@ export class Traffic {
         pitch = -Math.atan2(y2 - y, 2);
       }
       const yaw = Math.atan2(l.dir.x, l.dir.y);
-      this._q.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
-      car.body.setNextKinematicTranslation({ x, y, z });
-      car.body.setNextKinematicRotation(this._q);
-      const far = Math.hypot(x - this.viewer.x, z - this.viewer.z) > 420;
-      this._m.compose(this._p.set(x, y, z), this._q, far ? this._zero : this._s);
+      this._q.setFromEuler(this._euler.set(pitch, yaw, 0, 'YXZ'));
+      // only cars near the viewer take part in physics; far ones are parked under the map
+      if (d < 140) { car.body.setNextKinematicTranslation({ x, y, z }); car.body.setNextKinematicRotation(this._q); car.parked = false; }
+      else if (!car.parked) { car.body.setTranslation({ x, y: -300, z }, false); car.parked = true; }
+      if (d > this.drawDistance) continue;
+      if (d > this.lodDistance) {
+        const fs = usedFar.get(car.type)!;
+        usedFar.set(car.type, fs + 1);
+        this._m.compose(this._p.set(x, y, z), this._q, this._s);
+        const fm = this.meshes.get(car.type)!.far;
+        fm.setMatrixAt(fs, this._m);
+        fm.setColorAt(fs, car.paint);
+        continue;
+      }
+      const slot = used.get(car.type)!;
+      used.set(car.type, slot + 1);
+      this._m.compose(this._p.set(x, y, z), this._q, this._s);
       const mm = this.meshes.get(car.type)!;
-      for (const im of mm.parts) im.setMatrixAt(car.slot, this._m);
+      for (const im of mm.parts) {
+        im.setMatrixAt(slot, this._m);
+        if (im.instanceColor && im.userData.paint) im.setColorAt(slot, car.paint);
+      }
       car.kit.wheels.forEach((w, wi) => {
         this._wm.makeTranslation(w.x, w.y, w.z);
         this._full.multiplyMatrices(this._m, this._wm);
-        for (const im of mm.wheels) im.setMatrixAt(car.slot * 4 + wi, this._full);
+        for (const im of mm.wheels) im.setMatrixAt(slot * 4 + wi, this._full);
       });
     }
-    for (const mm of this.meshes.values()) {
-      for (const im of mm.parts) im.instanceMatrix.needsUpdate = true;
-      for (const im of mm.wheels) im.instanceMatrix.needsUpdate = true;
+    for (const [type, mm] of this.meshes) {
+      const n = used.get(type)!;
+      for (const im of mm.parts) { im.count = n; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
+      for (const im of mm.wheels) { im.count = n * 4; im.instanceMatrix.needsUpdate = true; }
+      mm.far.count = usedFar.get(type)!;
+      mm.far.instanceMatrix.needsUpdate = true;
+      if (mm.far.instanceColor) mm.far.instanceColor.needsUpdate = true;
     }
-    void up;
   }
+  /** cars beyond this distance from the camera are not drawn */
+  drawDistance = 380;
 
   /** A player crash into a traffic car: it stops and honks. Returns true if a car was near. */
   bump(at: THREE.Vector3): boolean {

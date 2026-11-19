@@ -156,3 +156,26 @@ export function acUnitGeometry(): THREE.BufferGeometry {
   const pipe = colored(new THREE.CylinderGeometry(0.015, 0.015, 0.9, 5).translate(0.36, -0.2, 0.05), 0xdddddd);
   return merge([body, grill, bracket, pipe]);
 }
+
+/** Lightweight stand-ins for the high-poly scanned bin / park lamp (perf). */
+export function lightBinParts() {
+  const metal = new THREE.MeshStandardMaterial({ color: 0x8a9096, metalness: 0.7, roughness: 0.45, name: 'bin' });
+  const g = merge([
+    colored(new THREE.CylinderGeometry(0.28, 0.25, 0.85, 12, 1, true).translate(0, 0.43, 0), 0xffffff),
+    colored(new THREE.CylinderGeometry(0.3, 0.3, 0.06, 12).translate(0, 0.88, 0), 0xdddddd),
+    colored(new THREE.CircleGeometry(0.25, 12).rotateX(-Math.PI / 2).translate(0, 0.02, 0), 0x555555),
+  ]);
+  return { parts: [{ geometry: g, material: metal }], size: new THREE.Vector3(0.6, 0.9, 0.6) };
+}
+export function lightParkLampParts() {
+  const iron = new THREE.MeshStandardMaterial({ color: 0x1d1f22, metalness: 0.6, roughness: 0.5, name: 'lamp_iron' });
+  const glass = new THREE.MeshStandardMaterial({ color: 0xfff2d6, roughness: 0.2, name: 'lamp_glass', emissive: 0xffc27a, emissiveIntensity: 0 });
+  const pole = merge([
+    colored(new THREE.CylinderGeometry(0.06, 0.1, 3.1, 8).translate(0, 1.55, 0), 0xffffff),
+    colored(new THREE.CylinderGeometry(0.16, 0.2, 0.35, 8).translate(0, 0.17, 0), 0xffffff),
+    colored(new THREE.ConeGeometry(0.22, 0.25, 6).translate(0, 3.7, 0), 0xffffff),
+    colored(new THREE.CylinderGeometry(0.2, 0.12, 0.08, 6).translate(0, 3.1, 0), 0xffffff),
+  ]);
+  const lantern = colored(new THREE.CylinderGeometry(0.18, 0.13, 0.48, 6).translate(0, 3.36, 0), 0xffffff);
+  return { parts: [{ geometry: pole, material: iron }, { geometry: lantern, material: glass }], size: new THREE.Vector3(0.4, 3.9, 0.4) };
+}

@@ -77,6 +77,7 @@ export class PostFX {
   private ao: N8AOPostPass;
   readonly bloom: BloomEffect;
   private camfx = new CameraFXEffect();
+  private camfxPass!: EffectPass;
   motionBlur = true;
 
   constructor(private renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, quality: 'low' | 'high' = 'high') {
@@ -97,7 +98,9 @@ export class PostFX {
     const tone = new ToneMappingEffect({ mode: ToneMappingMode.AGX });
     const vignette = new VignetteEffect({ offset: 0.3, darkness: 0.55, blendFunction: BlendFunction.NORMAL });
     this.composer.addPass(new EffectPass(camera, this.bloom, this.exposure, tone, this.grade, vignette));
-    this.composer.addPass(new EffectPass(camera, this.camfx));
+    this.camfxPass = new EffectPass(camera, this.camfx);
+    this.camfxPass.enabled = false;
+    this.composer.addPass(this.camfxPass);
     this.composer.addPass(new EffectPass(camera, new SMAAEffect()));
     this.motionBlur = quality !== 'low';
   }
@@ -110,6 +113,7 @@ export class PostFX {
     (u.get('blurDir')!.value as THREE.Vector2).copy(this.motionBlur ? blur : new THREE.Vector2());
     u.get('zoom')!.value = this.motionBlur ? zoom : 0;
     u.get('haze')!.value = haze;
+    this.camfxPass.enabled = haze > 0.001;
     u.get('time')!.value = time;
   }
 

@@ -3,6 +3,7 @@ import { Input, type InputState } from './Input';
 import { CityBuilder, type CityRuntime } from '../world/City';
 import { loadTextures, setMaxAnisotropy } from '../render/Textures';
 import { loadModel } from '../render/GltfInstances';
+import { lightBinParts, lightParkLampParts } from '../world/Props';
 import { PostFX } from '../render/Post';
 import { DayNight } from '../world/DayNight';
 import { buildSea } from '../world/Sea';
@@ -75,11 +76,16 @@ export class Game {
   /** last frame input (for systems) */
   lastInput: InputState = { moveX: 0, moveY: 0, lookX: 0, lookY: 0, run: false, walk: false, jump: false, zoom: 0 };
   private hornCooldown = 0;
+  renderScale = 1;
+  private maxScale = 1;
+  private perfT = 0;
+  private perfFrames = 0;
+  private perfWarm = 0;
   private punchCooldown = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(1);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.NoToneMapping; // tone mapping happens in PostFX
@@ -103,10 +109,12 @@ export class Game {
   async load(onLoaded?: (g: Game) => Promise<void> | void): Promise<void> {
     const loading = new LoadingScreen();
     loading.progress(0.02, 'טוענים טקסטורות…');
-    const [, , chair, lamp, bin] = await Promise.all([
+    const [, , chair] = await Promise.all([
       loadTextures(['plaster', 'jstone', 'asphalt', 'pavers', 'sand', 'rock', 'slabs'], (p) => loading.progress(p * 0.15)),
-      preloadCharacters(), loadModel('chair'), loadModel('lamp'), loadModel('bin', (n) => n === 'metal_trash_can' || (n.startsWith('metal_trash_can_') && !n.includes('rust'))),
+      preloadCharacters(), loadModel('chair'),
     ]);
+    // the scanned bin / lamp are ~14k / ~30k triangles each – light procedural versions instead
+    const lamp = lightParkLampParts(), bin = lightBinParts();
     const builder = new CityBuilder({ chair, lamp, bin });
     const steps = builder.steps();
     for (let i = 0; i < steps.length; i++) {
@@ -126,17 +134,20 @@ export class Game {
     this.physics = await Physics.create(this.city.colliders, terrain, [route1]);
     this.vehicles = new VehicleSystem(this.physics, this.city.colliders);
     this.scene.add(this.vehicles.group);
-    this.traffic = new Traffic(this.physics);
+    this.traffic = new Traffic(this.physics, this.quality === 'low' ? 0.5 : this.quality === 'medium' ? 0.75 : 1);
+    this.traffic.drawDistance = this.quality === 'low' ? 220 : this.quality === 'medium' ? 300 : 400;
     this.scene.add(this.traffic.group);
 
     loading.progress(0.8, 'מגייסים הולכי רגל…');
     await nextFrame();
-    this.peds = await Pedestrians.create(this.quality === 'low' ? 12 : this.quality === 'medium' ? 16 : 22, 3);
+    this.peds = await Pedestrians.create(this.quality === 'low' ? 8 : this.quality === 'medium' ? 12 : 18, 3);
     this.scene.add(this.peds.group);
 
     const low = this.quality === 'low';
-    if (low) this.renderer.setPixelRatio(0.75);
-    else if (this.quality === 'medium') this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+    // render scale: never above 1 CSS px (except 'high' on small screens), adapted at runtime to hold ~60 FPS
+    this.maxScale = this.quality === 'high' ? Math.min(window.devicePixelRatio, 1.25) : 1;
+    this.renderScale = low ? 0.75 : this.maxScale;
+    this.renderer.setPixelRatio(this.renderScale);
     this.dayNight = new DayNight(this.scene, this.renderer, low ? 1024 : 2048);
     const hour = Number(this.params.get('hour'));
     this.dayNight.hour = Number.isFinite(hour) && this.params.has('hour') ? hour : 16.9;
@@ -155,7 +166,7 @@ export class Game {
     this.player.spawn(sp.x, sp.z, sp.yaw);
     this.follow = new FollowCamera(this.camera, this.city.colliders);
     this.follow.snap(this.player.position, sp.yaw);
-    this.post = new PostFX(this.renderer, this.scene, this.camera, low ? 'low' : 'high');
+    this.post = new PostFX(this.renderer, this.scene, this.camera, this.quality === 'high' ? 'high' : 'low');
     this.resize();
 
     if (onLoaded) await onLoaded(this);
@@ -251,6 +262,25 @@ export class Game {
     this.update(dt, rawDt);
     this.render(dt);
     this.input.endFrame();
+    this.adaptResolution(rawDt);
+  }
+
+  /** Dynamic resolution: lower the render scale when FPS drops, raise it back when there's headroom. */
+  private adaptResolution(rawDt: number) {
+    this.perfWarm += rawDt;
+    if (this.perfWarm < 3) return; // ignore shader-compile hitches at start
+    this.perfT += rawDt; this.perfFrames++;
+    if (this.perfT < 1) return;
+    const fps = this.perfFrames / this.perfT;
+    this.perfT = 0; this.perfFrames = 0;
+    let s = this.renderScale;
+    if (fps < 48) s = Math.max(0.5, s - (fps < 30 ? 0.15 : 0.08));
+    else if (fps > 58 && s < this.maxScale) s = Math.min(this.maxScale, s + 0.05);
+    if (Math.abs(s - this.renderScale) > 0.001) {
+      this.renderScale = s;
+      this.renderer.setPixelRatio(s);
+      this.resize();
+    }
   }
 
   update(dt: number, rawDt: number) {
